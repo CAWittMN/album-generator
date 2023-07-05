@@ -18,3 +18,9 @@ class UserForm(FlaskForm):
 class LoginForm(FlaskForm):
     username = StringField("Username", validators=[InputRequired()])
     password = PasswordField("Password", validators=[InputRequired()])
+
+
+class BandForm(FlaskForm):
+    additional_prompt = TextAreaField("Additional details")
+    theme = StringField("Theme", validators=[InputRequired()])
+    genre = SelectField("Genre", validators=[InputRequired()])

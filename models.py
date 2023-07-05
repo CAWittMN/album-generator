@@ -6,15 +6,14 @@ bcrypt = Bcrypt()
 db = SQLAlchemy()
 
 
-def generate_album_prompt(theme, genre, band):
-    return f"generate a {theme} {genre} album from a fictional {theme} {genre} band named {band} with songs, song lengths in seconds, and {theme} album cover typical of {genre} bands"
-
-
 def generate_prompt(theme, genre):
+    """Generate a prompt for the user to use in the API call"""
     return f"generate a {genre} band name with a {theme} biography about 400 characters long, a {theme} album title with {theme} songs and song lengths, and a {theme} album cover typical of {genre} bands. Format the response in json."
 
 
 class User(db.Model):
+    """User model with references to bands, albums, songs, and likes"""
+
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -34,6 +33,8 @@ class User(db.Model):
 
     @classmethod
     def register_user(cls, username, first_name, last_name, email, password):
+        """Register a new user"""
+
         new_user = cls(
             username=username,
             first_name=first_name,
@@ -46,6 +47,8 @@ class User(db.Model):
 
     @classmethod
     def authenticate(cls, username, password):
+        """Authenticate a user"""
+
         user = cls.query.filter_by(username=username).first()
         if bcrypt.check_password_hash(password, user.password):
             return user
@@ -53,6 +56,8 @@ class User(db.Model):
 
 
 class Band(db.Model):
+    """Band model with references to albums, songs, tags, and genre"""
+
     __tablename__ = "bands"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -61,18 +66,37 @@ class Band(db.Model):
     bio = db.Column(db.String, nullable=False)
     genre = db.Column(db.Integer, db.ForeignKey("genres.name"))
     theme = db.Column(db.String, nullable=False)
+    photo_url = db.Column(db.String, nullable=False)
 
+    members = db.relationship("Member", backref="band")
     genre = db.relationship("Genre", backref="bands")
     albums = db.relationship("Album", backref="band")
     songs = db.relationship("Song", backref="band")
     tags = db.relationship("Tag", secondary="tags_bands", backref="bands")
 
     @classmethod
-    def register_band(cls, user_id, name, bio, genre_id, theme):
+    def register_band(cls, user, name, bio, genre_id, theme):
         new_band = cls(
-            user_id=user_id, name=name, bio=bio, genre_id=genre_id, theme=theme
+            user_id=user.id, name=name, bio=bio, genre_id=genre_id, theme=theme
         )
+        user.bands.append(new_band)
         db.session.add(new_band)
+        db.session.commit()
+
+
+class Member(db.Model):
+    __tablename__ = "members"
+
+    id = db.Column(db.Integer, primary_key=True)
+    band_id = db.Column(db.Integer, db.ForeignKey("bands.id"), nullable=False)
+    name = db.Column(db.String, nullable=False)
+    role = db.Column(db.String, nullable=False)
+
+    @classmethod
+    def register_member(cls, name, role, band):
+        new_member = cls(name=name, role=role, band_id=band.id)
+        band.members.append(new_member)
+        db.session.add(new_member)
         db.session.commit()
 
 
@@ -83,13 +107,15 @@ class Album(db.Model):
     band_id = db.Column(db.Integer, db.ForeignKey("bands.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     title = db.Column(db.String, nullable=False)
+    artwork_url = db.Column(db.String, nullable=False)
 
     songs = db.relationship("Songs", backref="album")
 
     @classmethod
     def register_album(cls, title, band, user):
         new_album = cls(title=title, band_id=band.id, user_id=user.id)
-
+        user.albums.append(new_album)
+        band.albums.append(new_album)
         db.session.add(new_album)
         db.session.commit()
 
@@ -108,21 +134,23 @@ class Song(db.Model):
     def register_song(cls, songs, user, album, band):
         for song in songs:
             new_song = cls(
+                user_id=user.id,
+                album_id=album.id,
+                band_id=band.id,
                 title=song["title"],
                 duration_seconds=song["duration_seconds"],
             )
             user.songs.append(new_song)
             band.songs.append(new_song)
             album.songs.append(new_song)
-
-        db.session.commit()
+            db.session.add(new_song)
+            db.session.commit()
 
 
 class Genre(db.Model):
     __tablename__ = "genres"
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False, unique=True)
+    name = db.Column(db.String, primary_key=True, nullable=False, unique=True)
     hypothetical = db.Column(db.Boolean, nullable=False, default=False)
     description = db.Column(db.String, nullable=False)
 
