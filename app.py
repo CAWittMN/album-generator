@@ -45,16 +45,6 @@ def do_logout():
         del session[CURR_USER_KEY]
 
 
-def make_name_dict(name):
-    """Takes a name and returns a dictionary with first and last name and formats capitalization"""
-
-    name_dict = {}
-    name_list = name.split()
-    name_dict["first_name"] = name_list[0].capitalize()
-    name_dict["last_name"] = name_list[1].capitalize()
-    return name_dict
-
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Handle user login."""

@@ -54,6 +54,15 @@ class User(db.Model):
             return user
         return False
 
+    @classmethod
+    def make_name_dict(name):
+        """Takes a name and returns a dictionary with first and last name and formats capitalization"""
+        name_dict = {}
+        name_list = name.split()
+        name_dict["first_name"] = name_list[0].capitalize()
+        name_dict["last_name"] = name_list[1].capitalize()
+        return name_dict
+
 
 class Band(db.Model):
     """Band model with references to albums, songs, tags, and genre"""
