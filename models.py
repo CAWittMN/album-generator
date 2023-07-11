@@ -22,7 +22,7 @@ class User(db.Model):
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False)
-    password = db.Columm(db.String, nullable=False)
+    password = db.Column(db.String, nullable=False)
     validated = db.Column(db.Boolean, default=False)
 
     liked_bands = db.relationship("Band", secondary="likes", backref="user_likes")
@@ -92,6 +92,24 @@ class Band(db.Model):
         db.session.add(new_band)
         db.session.commit()
 
+    def to_dict(self):
+        album_list = [album.to_dict() for album in self.albums]
+        member_list = [member.to_dict() for member in self.members]
+        tag_list = [tag.name for tag in self.tags]
+
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "members": member_list,
+            "bio": self.bio,
+            "genre": self.genre.name,
+            "theme": self.theme,
+            "photo_url": self.photo_url,
+            "albums": album_list,
+            "tags": tag_list,
+        }
+
 
 class Member(db.Model):
     __tablename__ = "members"
@@ -108,6 +126,13 @@ class Member(db.Model):
         db.session.add(new_member)
         db.session.commit()
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "role": self.role,
+        }
+
 
 class Album(db.Model):
     __tablename__ = "albums"
@@ -122,11 +147,24 @@ class Album(db.Model):
 
     @classmethod
     def register_album(cls, title, band, user):
+        """Register a new album"""
+
         new_album = cls(title=title, band_id=band.id, user_id=user.id)
         user.albums.append(new_album)
         band.albums.append(new_album)
         db.session.add(new_album)
         db.session.commit()
+
+    def to_dict(self):
+        """Return a dictionary of the album data"""
+
+        song_list = [song.to_dict() for song in self.songs]
+        return {
+            "id": self.id,
+            "title": self.title,
+            "songs": song_list,
+            "artwork": self.artwork_url,
+        }
 
 
 class Song(db.Model):
@@ -141,6 +179,7 @@ class Song(db.Model):
 
     @classmethod
     def register_song(cls, songs, user, album, band):
+        """Register a new song"""
         for song in songs:
             new_song = cls(
                 user_id=user.id,
@@ -154,6 +193,15 @@ class Song(db.Model):
             album.songs.append(new_song)
             db.session.add(new_song)
             db.session.commit()
+
+        def to_dict(self):
+            """Return a dictionary of the song data"""
+
+            return {
+                "id": self.id,
+                "title": self.title,
+                "duration_seonds": self.duration_seconds,
+            }
 
 
 class Genre(db.Model):
@@ -190,11 +238,13 @@ class Like(db.Model):
     @classmethod
     def add_like(cls, user, band):
         new_like = cls(user_id=user.id, band_id=band.id)
-        user.likes.append(new_like)
+        user.liked_bands.append(band)
+        db.session.add(new_like)
         db.session.commit()
 
 
 def connect_to_db(app):
-    db.app = app
-    db.init_app(app)
-    db.create_all()
+    with app.app_context():
+        db.app = app
+        db.init_app(app)
+        db.create_all()
