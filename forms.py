@@ -24,3 +24,8 @@ class BandForm(FlaskForm):
     additional_prompt = TextAreaField("Additional details")
     theme = StringField("Theme", validators=[InputRequired()])
     genre = SelectField("Genre", validators=[InputRequired()])
+
+
+class NewPasswordForm(FlaskForm):
+    old_password = PasswordField("Old password", validators=[InputRequired()])
+    new_password = PasswordField("New password", validators=[InputRequired()])
