@@ -35,12 +35,14 @@ class User(db.Model):
     def register_user(cls, username, first_name, last_name, email, password):
         """Register a new user"""
 
+        hashed_pwd = bcrypt.generate_password_hash(password).decode("UTF-8")
+
         new_user = cls(
             username=username,
             first_name=first_name,
             last_name=last_name,
             email=email,
-            password=password,
+            password=hashed_pwd,
         )
         db.session.add(new_user)
         db.session.commit()
@@ -73,12 +75,12 @@ class Band(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     name = db.Column(db.String, nullable=False)
     bio = db.Column(db.String, nullable=False)
-    genre = db.Column(db.Integer, db.ForeignKey("genres.name"))
+    genre = db.Column(db.String, db.ForeignKey("genres.name"))
     theme = db.Column(db.String, nullable=False)
     photo_url = db.Column(db.String, nullable=False)
 
     members = db.relationship("Member", backref="band")
-    genre = db.relationship("Genre", backref="bands")
+    # genre = db.relationship("Genre", backref="bands")
     albums = db.relationship("Album", backref="band")
     songs = db.relationship("Song", backref="band")
     tags = db.relationship("Tag", secondary="tags_bands", backref="bands")
@@ -143,7 +145,7 @@ class Album(db.Model):
     title = db.Column(db.String, nullable=False)
     artwork_url = db.Column(db.String, nullable=False)
 
-    songs = db.relationship("Songs", backref="album")
+    songs = db.relationship("Song", backref="album")
 
     @classmethod
     def register_album(cls, title, band, user):

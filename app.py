@@ -30,7 +30,7 @@ from forms import LoginForm, UserForm, BandForm, NewPasswordForm
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
 
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+openai.api_key = os.environ.get("OPENAI_API_KEY", "tempkey")
 openai.Model.list()
 
 CURR_USER_KEY = "curr_user"
@@ -44,8 +44,8 @@ app.config["MAIL_SERVER"] = "smtp.mail.com"
 app.config["MAIL_PORT"] = 465
 app.config["MAIL_USE_SSL"] = True
 app.config["MAIL_USE_TLS"] = False
-app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
-app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME", "tempname")
+app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD", "temppassword")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "tempkey")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
     "DATABASE_URL", "postgresql:///album_generator"
@@ -320,7 +320,7 @@ def show_band(band_id):
     return render_template("band.html", band=band)
 
 
-@app.route("/api/bands/<int:band_id>/like/<int:user_id", methods=["POST"])
+@app.route("/api/bands/<int:band_id>/like/<int:user_id>", methods=["POST"])
 def add_remove_like_band(band_id, user_id):
     """Like a band"""
 
@@ -348,7 +348,7 @@ def delete_band(band_id):
     return redirect(url_for("logged_in_home"))
 
 
-@app.route("bands/new", methods=["GET", "POST"])
+@app.route("/bands/new", methods=["GET", "POST"])
 def create_band():
     """Create a new band"""
 
