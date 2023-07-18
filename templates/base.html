@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Album Generator</title>
+    <title>AlGen - {% block title %}{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Rubik+Dirt&display=swap"
+      href="https://fonts.googleapis.com/css2?family=New+Rocker&display=swap"
       rel="stylesheet"
     />
     <link
@@ -16,6 +16,7 @@
       integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
       crossorigin="anonymous"
     />
+    <link rel="stylesheet" href="/static/styles.css" />
     <script src="
     https://cdn.jsdelivr.net/npm/axios@1.4.0/dist/axios.min.js
     "></script>
@@ -29,21 +30,105 @@
     "></script>
   </head>
   <body>
-    <header class="navbar navbar-expand-lg bd-navbar sticky-top">
-      <nav class="container-lg bd-gutter shadow-lg navbar-dark bg-dark rounded">
+    <header class="sticky-top">
+      <nav class="navbar navbar-expand-md navbar-dark bg-dark container-lg">
         <div class="container-fluid">
-          <a href="/" class="rock-font navbar-brand">Album Generator</a>
-          <button
-            class="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
+          <div
+            class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2"
           >
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarNav"></div>
+            <ul class="navbar-nav me-auto">
+              <li class="nav-item">
+                <a class="nav-link" href="#">Search Bands</a>
+              </li>
+            </ul>
+          </div>
+          <div class="mx-auto order-0">
+            <a class="navbar-brand mx-auto rock-font" href="#"
+              >Album Generator</a
+            >
+            <button
+              class="navbar-toggler"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target=".dual-collapse2"
+            >
+              <span class="navbar-toggler-icon"></span>
+            </button>
+          </div>
+          <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
+            <ul class="navbar-nav ms-auto">
+              {% if g.user %}
+              <li class="nav-item">
+                <a class="nav-link" href="#">Profile</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+              </li>
+              {% else %}
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('signup') }}">Register</a>
+              </li>
+              <li class="nav-item dropdown">
+                <a
+                  class="nav-link dropdown-toggle"
+                  href="#"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  >Login</a
+                >
+                <ul class="dropdown-menu">
+                  <li>
+                    <form
+                      class="row"
+                      action="{{ url_for('login') }}"
+                      method="post"
+                    >
+                      {{ form.hidden_tag() }} {% for field in form if
+                      field.widget.input_type != 'hidden' %}
+                      <div class="col-sm-6">
+                        {{ field.label(class="form-label") }} {{
+                        field(class="form-control") }}
+                      </div>
+                      {% endfor %}
+                      <div class="col-sm-6">
+                        <button type="submit" class="btn btn-primary">
+                          Login
+                        </button>
+                      </div>
+                    </form>
+                  </li>
+                </ul>
+              </li>
+              {% endif %}
+            </ul>
+          </div>
         </div>
       </nav>
     </header>
+    <section id="messages">
+      {% with messages = get_flashed_messages() %} {% if messages %} {% for msg
+      in messages %}
+      <div class="w-25 container-sm">
+        <div
+          class="alert-danger alert alert-dismissible fade show"
+          role="alert"
+        >
+          {{ msg }}
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
+    </section>
+    <div class="container-lg">
+      <section id="content">
+        <div class="container-lg">{% block content %}{% endblock %}</div>
+      </section>
+    </div>
   </body>
 </html>

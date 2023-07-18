@@ -1,0 +1,15 @@
+{% extends 'base.html' %} {% block title %}Register{% endblock %} {% block
+content %}
+<form class="row" action="{{ url_for('signup') }}" method="post">
+  {{ form.hidden_tag() }} {% for field in form if field.widget.input_type !=
+  'hidden' %}
+  <div class="col-sm-6">
+    {{ field.label(class="form-label") }} {{ field(class="form-control") }}
+  </div>
+  {% endfor %}
+  <div class="col-sm-6">
+    <button type="submit" class="btn btn-primary">Register</button>
+  </div>
+
+  {% endblock %}
+</form>

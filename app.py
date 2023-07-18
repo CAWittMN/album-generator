@@ -14,10 +14,11 @@ from flask import (
     jsonify,
 )
 from sqlalchemy.sql import func
+from sqlalchemy.exc import IntegrityError
 from models import (
     connect_to_db,
     db,
-    generate_prompt,
+    generate_band_prompt,
     bcrypt,
     User,
     Band,
@@ -27,7 +28,7 @@ from models import (
     Genre,
     Tag,
 )
-from forms import LoginForm, UserForm, BandForm, NewPasswordForm
+from forms import LoginForm, UserForm, BandForm, NewPasswordForm, GenerateForm
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
 
@@ -56,6 +57,18 @@ toolbar = DebugToolbarExtension(app)
 
 connect_to_db(app)
 
+
+@app.before_request
+def add_user_to_g():
+    """If user is logged in, add curr user to Flask global."""
+
+    if CURR_USER_KEY in session:
+        g.user = User.query.get(session[CURR_USER_KEY])
+
+    else:
+        g.user = None
+
+
 #########################################################################################
 # Homepage Routes
 
@@ -67,22 +80,11 @@ def show_homepage():
     form = LoginForm()
     bands = Band.query.order_by(func.random()).limit(30).all()
 
-    return render_template("home.html", form=form)
+    return render_template("home.html", form=form, bands=bands)
 
 
 #########################################################################################
 # Login/Logout/Signup Routes
-
-
-@app.before_request
-def add_user_to_g():
-    """If user is logged in, add curr user to Flask global."""
-
-    if CURR_USER_KEY in session:
-        g.user = User.query.get(session[CURR_USER_KEY])
-
-    else:
-        g.user = None
 
 
 def do_login(user):
@@ -116,6 +118,9 @@ def login():
                 return redirect(url_for("validate_email", user_id=user.id))
             return redirect(url_for("logged_in_home"))
 
+        flash("Invalid credentials.")
+        return redirect(url_for("show_homepage"))
+
     return render_template("login.html", form=form)
 
 
@@ -139,15 +144,20 @@ def signup():
 
     if form.validate_on_submit():
         name = User.make_name_dict(form.name.data)
-        user = User.register_user(
-            username=form.username.data,
-            first_name=name["first_name"],
-            last_name=name["last_name"],
-            email=form.email.data,
-            password=form.password.data,
-        )
+        try:
+            user = User.register_user(
+                username=form.username.data,
+                first_name=name["first_name"],
+                last_name=name["last_name"],
+                email=form.email.data,
+                password=form.password.data,
+            )
+        except IntegrityError:
+            flash("Username already taken.")
+            return redirect(url_for("signup"))
+
         do_login(user)
-        return redirect(url_for("validate_email"))
+        return redirect(url_for("send_validation_email"))
 
     return render_template("signup.html", form=form)
 
@@ -350,24 +360,47 @@ def delete_band(band_id):
 
 
 @app.route("/bands/new", methods=["GET", "POST"])
-def create_band():
+def generate_band():
     """Create a new band"""
 
     if not g.user:
         flash("Access unauthorized.")
         return redirect(url_for("show_homepage"))
 
-    form = BandForm()
+    form = GenerateForm()
 
     if form.validate_on_submit():
-        prompt = generate_prompt(form.theme.data, form.genre.data)
+        prompt = generate_band_prompt(form.theme.data, form.genre.data)
         response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=prompt)
         data = json.loads(response["choices"][0]["text"].strip())
 
-        flash("Band created.")
-        return redirect(url_for("logged_in_home"))
+        return redirect(url_for("confirm_band", data=data))
 
     return render_template("new_band.html", form=form)
+
+
+@app.route("/bands/confirm", methods=["GET", "POST"])
+def confirm_band():
+    """Confirm band details"""
+
+    if not g.user:
+        flash("Access unauthorized.")
+        return redirect(url_for("show_homepage"))
+
+    form = BandForm(obj=band)
+
+    if form.validate_on_submit():
+        Band.register_band(
+            user=g.user,
+            name=form.name.data,
+            theme=form.theme.data,
+            genre=form.genre.data,
+            additional_prompt=form.additional_prompt.data,
+            tags=form.tags.data,
+        )
+        return redirect(url_for("logged_in_home"))
+
+    return render_template("confirm_band.html", form=form)
 
 
 #########################################################################################
@@ -375,7 +408,7 @@ def create_band():
 
 
 @app.route("/api/bands/generate")
-def generate_band():
+def generate_ban_api():
     """Generate a new band"""
 
     prompt = generate_prompt(request.json["theme"], request.json["genre"])

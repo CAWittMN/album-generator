@@ -1,20 +1,42 @@
 from flask_sqlalchemy import SQLAlchemy, session
 from flask_bcrypt import Bcrypt
+import datetime
 
 bcrypt = Bcrypt()
 
 db = SQLAlchemy()
 
 
-def generate_prompt(theme, genre):
+def generate_band_prompt(theme, genre, additional_prompt=""):
     """Generate a prompt for the user to use in the API call"""
-    return [
+    prompt = [
         {
             "roll": "system",
-            "content": f"You are a {theme} data generator bot that will generate json data for a fictional {genre} band with a short biography, members, album, and songs for the album with song duration in seconds. This response will be {theme} and in the format of name:, bio:, members: [name:, roll:], album: [title:, songs: [title:, duration_seconds:]",
+            "content": f"You are a {theme} data generator bot that will generate json data for a fictional band with a short biography, members, album, and songs for the album with song duration in seconds. The nature of this response will be {theme} and in the format of name:, bio:, members: [name:, role:], album: [title:, songs: [title:, duration_seconds:]",
         },
-        {"roll": "user", "content": f"Generate a {genre} band in a {theme} way"},
+        {
+            "roll": "user",
+            "content": f"Generate a {genre} band. {additional_prompt}",
+        },
     ]
+    return prompt
+
+
+def generate_new_album_prompt(band, additional_prompt=""):
+    prompt = [
+        {
+            "roll": "system",
+            "content": f"You are a {band.theme} data generator bot that will generate json data for an album by a provided fictional band with songs for the album. The nature of this response will be {band.theme} and in the format of title:, songs: [title:, duration_seconds:]",
+        },
+        {
+            "roll": "user",
+            "content": f"Generate an album for the {band.genre.name} band {band.name}. {additional_prompt}",
+        },
+    ]
+
+
+def generate_album_artwork_prompt(band):
+    prompt = []
 
 
 class User(db.Model):
@@ -24,7 +46,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
-    date_joined = db.Column(db.DateTime, nullable=False)
+    date_joined = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now)
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False)
@@ -33,9 +55,9 @@ class User(db.Model):
 
     liked_bands = db.relationship("Band", secondary="likes", backref="user_likes")
 
-    bands = db.relationship("Band", backref="user")
-    albums = db.relationship("Album", backref="user")
-    songs = db.relationship("Song", backref="user")
+    bands = db.relationship("Band", backref="user", cascade="all, delete-orphan")
+    albums = db.relationship("Album", backref="user", cascade="all, delete-orphan")
+    songs = db.relationship("Song", backref="user", cascade="all, delete-orphan")
 
     @classmethod
     def register_user(cls, username, first_name, last_name, email, password):
@@ -53,17 +75,19 @@ class User(db.Model):
         db.session.add(new_user)
         db.session.commit()
 
+        return new_user
+
     @classmethod
     def authenticate(cls, username, password):
         """Authenticate a user"""
 
         user = cls.query.filter_by(username=username).first()
-        if bcrypt.check_password_hash(password, user.password):
+        if user and bcrypt.check_password_hash(password, user.password):
             return user
         return False
 
     @classmethod
-    def make_name_dict(name):
+    def make_name_dict(cls, name):
         """Takes a name and returns a dictionary with first and last name and formats capitalization"""
         name_dict = {}
         name_list = name.split()
@@ -81,14 +105,14 @@ class Band(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     name = db.Column(db.String, nullable=False)
     bio = db.Column(db.String, nullable=False)
-    genre = db.Column(db.String, db.ForeignKey("genres.name"))
+    genre_id = db.Column(db.Integer, db.ForeignKey("genres.id"))
     theme = db.Column(db.String, nullable=False)
     photo_url = db.Column(db.String, nullable=False)
 
-    members = db.relationship("Member", backref="band")
-    # genre = db.relationship("Genre", backref="bands")
-    albums = db.relationship("Album", backref="band")
-    songs = db.relationship("Song", backref="band")
+    members = db.relationship("Member", backref="band", cascade="all, delete-orphan")
+    genre = db.relationship("Genre", backref="bands")
+    albums = db.relationship("Album", backref="band", cascade="all, delete-orphan")
+    songs = db.relationship("Song", backref="band", cascade="all, delete-orphan")
     tags = db.relationship("Tag", secondary="tags_bands", backref="bands")
 
     @classmethod
@@ -151,7 +175,7 @@ class Album(db.Model):
     title = db.Column(db.String, nullable=False)
     artwork_url = db.Column(db.String, nullable=False)
 
-    songs = db.relationship("Song", backref="album")
+    songs = db.relationship("Song", backref="album", cascade="all, delete-orphan")
 
     @classmethod
     def register_album(cls, title, band, user):
@@ -215,7 +239,8 @@ class Song(db.Model):
 class Genre(db.Model):
     __tablename__ = "genres"
 
-    name = db.Column(db.String, primary_key=True, nullable=False, unique=True)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False, unique=True)
     hypothetical = db.Column(db.Boolean, nullable=False, default=False)
     description = db.Column(db.String, nullable=False)
 

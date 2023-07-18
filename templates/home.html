@@ -1,3 +1,38 @@
-{% extends 'base.html' %}
-{% block content %}
-{% endblock %}
+{% extends 'base.html' %} {% block title %}Home{% endblock %} {% block content%}
+<div class="row">
+  <div class="col-md-12">
+    <h1 class="display-1">WELCOME</h1>
+    <p>
+      Want to start a band? Overwhelmed about the minute amount of effort to
+      think of band names, album titles, and song titles? Is your bassist
+      starting to be the one coming up with all the names? Don't fret! We've got
+      you covered. Here, you can create a new band of any genre and let ai do
+      all the creative parts that humans are supposed to do! Not convinced?
+      Browse some of the bands users have made. After you see how obsolete human
+      creativity and imagination is now that ChatGPT is a thing, join the AI
+      band wagon so you don't get left behind in the on coming AI apocalypse.
+    </p>
+  </div>
+</div>
+<div class="row">
+  {% for band in bands %}
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <img
+          src="{{ band.image }}"
+          class="card-img-top"
+          alt="{{ band.name }}"
+        />
+        <h5 class="card-title">{{ band.name }}</h5>
+        <p class="card-text">{{ band.bio }}</p>
+        <a
+          href="{{ url_for('show_band', band_id=band.id) }}"
+          class="btn btn-primary"
+          >View Band</a
+        >
+      </div>
+    </div>
+  </div>
+  {% endfor %} {% endblock %}
+</div>
