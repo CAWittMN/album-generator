@@ -8,7 +8,13 @@ db = SQLAlchemy()
 
 def generate_prompt(theme, genre):
     """Generate a prompt for the user to use in the API call"""
-    return f"generate a {genre} band name with a {theme} biography about 400 characters long, a {theme} album title with {theme} songs and song lengths, and a {theme} album cover typical of {genre} bands. Format the response in json."
+    return [
+        {
+            "roll": "system",
+            "content": f"You are a {theme} data generator bot that will generate json data for a fictional {genre} band with a short biography, members, album, and songs for the album with song duration in seconds. This response will be {theme} and in the format of name:, bio:, members: [name:, roll:], album: [title:, songs: [title:, duration_seconds:]",
+        },
+        {"roll": "user", "content": f"Generate a {genre} band in a {theme} way"},
+    ]
 
 
 class User(db.Model):

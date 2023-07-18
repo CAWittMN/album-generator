@@ -1,4 +1,5 @@
 import os
+import json
 import openai
 from flask_debugtoolbar import DebugToolbarExtension
 from flask import (
@@ -30,7 +31,7 @@ from forms import LoginForm, UserForm, BandForm, NewPasswordForm
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
 
-openai.api_key = os.environ.get("OPENAI_API_KEY", "tempkey")
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 openai.Model.list()
 
 CURR_USER_KEY = "curr_user"
@@ -359,8 +360,9 @@ def create_band():
     form = BandForm()
 
     if form.validate_on_submit():
-        # use openai api here
-        # prompt = generate_prompt(form.theme.data, form.genre.data)
+        prompt = generate_prompt(form.theme.data, form.genre.data)
+        response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=prompt)
+        data = json.loads(response["choices"][0]["text"].strip())
 
         flash("Band created.")
         return redirect(url_for("logged_in_home"))
@@ -370,6 +372,32 @@ def create_band():
 
 #########################################################################################
 # API Routes
+
+
+@app.route("/api/bands/generate")
+def generate_band():
+    """Generate a new band"""
+
+    prompt = generate_prompt(request.json["theme"], request.json["genre"])
+    response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=prompt)
+    data = json.loads(response["choices"][0]["text"].strip())
+
+    return jsonify(data)
+
+
+@app.route("/api/bands/post", methods=["POST"])
+def post_band():
+    data = request.json
+    tags_list = data["tags"]
+    tags = Tag.query.filter(Tag.name.in_(tags_list)).all()
+    Band.register_band(
+        user=g.user,
+        name=data["name"],
+        theme=data["theme"],
+        genre=data["genre"],
+        additional_prompt=data["additional_prompt"],
+        tags=data["tags"],
+    )
 
 
 @app.route("/api/bands")
@@ -401,7 +429,6 @@ def get_bands_by_like_name(name):
     return jsonify(bands=bands)
 
 
-# get band by tags
 @app.route("/api/bands/tags/")
 def get_bands_by_tags():
     """Return a list of bands by tags"""
