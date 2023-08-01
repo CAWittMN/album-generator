@@ -1,2 +1,177 @@
-{% extends 'base.html' %} {% block title %}{{ g.user.name }}{% endblock %} {%
-block content %} {% endblock %}
+{% extends 'base.html' %} {% block title %}{{ g.user.username }}{% endblock %}
+{% block content %}
+<div class="container-xxl bd-gutter mt-3 my-md-4">
+  <main class="container-sm bd-main order-1">
+    <div class="row">
+      <div class="col-lg-2">
+        <div class="card">
+          <div class="card-header">{{ g.user.username }}</div>
+          <div class="card-body">
+            <ul class="list-unstyled">
+              <li>
+                <a href="{{ url_for('logout') }}">Logout</a>
+              </li>
+              <li>
+                <a href="{{ url_for('edit_password') }}">Change Password</a>
+              </li>
+              <li>
+                <button
+                  class="btn btn-primary"
+                  type="button"
+                  data-bs-toggle="offcanvas"
+                  data-bs-target="#band-form"
+                  aria-controls="band-form"
+                >
+                  Make a Band
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-10">
+        <div class="card">
+          <div class="card-header">Your Posts</div>
+          <div class="card-body">
+            {% if g.user.bands|length == 0 %}
+            <p class="card-text">You have no bands.</p>
+            {% endif %} {% for band in g.user.bands %}
+            <div class="card">
+              <div class="card-header">
+                <a href="{{ url_for('show_band', band_id=band.id) }}"
+                  >{{ band.title }}</a
+                >
+              </div>
+              <div class="card-body">
+                <p class="card-text">{{ band.bio }}</p>
+              </div>
+              <div class="card-footer">
+                <small class="text-muted">{{ band.theme }}</small>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<!-- Modal -->
+<div
+  class="modal fade"
+  id="band-modal"
+  data-bs-backdrop="static"
+  data-bs-keyboard="false"
+  tabindex="-1"
+  aria-labelledby="band-modelLabel"
+  aria-hidden="true"
+>
+  <div
+    class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"
+  >
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="band-modalLabel">Loading band</h1>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body justify-content-center d-flex">
+        <div class="spinner-border text-danger" id="spinner" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          disabled
+          class="btn btn-secondary"
+          data-bs-dismiss="modal"
+        >
+          Close
+        </button>
+        <button type="button" disabled class="btn btn-primary">
+          Understood
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Offcanvas -->
+<div
+  class="offcanvas offcanvas-start"
+  tabindex="-1"
+  id="band-form"
+  aria-labelledby="offcanvasExampleLabel"
+>
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasExampleLabel">Make a band</h5>
+    <button
+      id="close-canvas"
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="offcanvas"
+      aria-label="Close"
+    ></button>
+  </div>
+  <div class="offcanvas-body">
+    <div>
+      Some text as placeholder. In real life you can have the elements you have
+      chosen. Like, text, images, lists, etc.
+    </div>
+    {% if form.errors %}
+    <ul class="list-unstyled">
+      {% for field in form if field.errors %} {% for error in field.errors %}
+      <li>{{ error }}</li>
+      {% endfor %} {% endfor %}
+    </ul>
+    {% endif %}
+    <form method="get">
+      {{ form.hidden_tag() }}
+      <div class="mb-3">
+        {{ form.theme.label(class="form-label") }} {{
+        form.theme(class="form-control", id="theme-input") }}
+      </div>
+      <div class="mb-0">
+        {{ form.genre.label(class="form-label") }} {{
+        form.genre(class="form-control", id="genre-input") }}
+      </div>
+      <div>
+        <a
+          class="link-secondary mt-0 mb-3"
+          data-bs-toggle="collapse"
+          href="#genre-collapse"
+          role="button"
+          aria-expanded="false"
+          aria-controls="genre-collapse"
+        >
+          What is this genre?
+        </a>
+      </div>
+      <div class="collapse" id="genre-collapse">
+        <div class="card card-body" id="genre-description"></div>
+      </div>
+      <div class="mt-3">
+        {{ form.additional_prompt.label(class="form-label") }} {{
+        form.additional_prompt(class="form-control", id="additional-prompt") }}
+      </div>
+      <div class="mt-3">
+        <button type="submit" class="btn">Submit</button>
+      </div>
+    </form>
+    <button
+      type="button"
+      id="modal-btn"
+      class="btn btn-primary"
+      hidden="true"
+      data-bs-toggle="modal"
+      data-bs-target="#band-modal"
+    >
+      Modal
+    </button>
+  </div>
+</div>
+{% endblock %}

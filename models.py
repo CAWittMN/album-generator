@@ -82,7 +82,7 @@ class User(db.Model):
         """Authenticate a user"""
 
         user = cls.query.filter_by(username=username).first()
-        if user and bcrypt.check_password_hash(password, user.password):
+        if user and bcrypt.check_password_hash(user.password, password):
             return user
         return False
 
@@ -107,10 +107,9 @@ class Band(db.Model):
     bio = db.Column(db.String, nullable=False)
     genre_id = db.Column(db.Integer, db.ForeignKey("genres.id"))
     theme = db.Column(db.String, nullable=False)
-    photo_url = db.Column(db.String, nullable=False)
+    photo_url = db.Column(db.String)  # nullable=False)
 
     members = db.relationship("Member", backref="band", cascade="all, delete-orphan")
-    genre = db.relationship("Genre", backref="bands")
     albums = db.relationship("Album", backref="band", cascade="all, delete-orphan")
     songs = db.relationship("Song", backref="band", cascade="all, delete-orphan")
     tags = db.relationship("Tag", secondary="tags_bands", backref="bands")
@@ -244,6 +243,14 @@ class Genre(db.Model):
     hypothetical = db.Column(db.Boolean, nullable=False, default=False)
     description = db.Column(db.String, nullable=False)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "hypothetical": self.hypothetical,
+            "description": self.description,
+        }
+
 
 class Tag(db.Model):
     __tablename__ = "tags"
@@ -278,6 +285,5 @@ class Like(db.Model):
 
 def connect_to_db(app):
     with app.app_context():
-        db.app = app
         db.init_app(app)
         db.create_all()

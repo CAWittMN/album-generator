@@ -1,8 +1,8 @@
 {% extends 'base.html' %} {% block title %}Home{% endblock %} {% block content%}
 <div class="row">
-  <div class="col-md-12">
+  <div class="col-md-12 pt-5 pb-5">
     <h1 class="display-1">WELCOME</h1>
-    <p>
+    <p class="text-center">
       Want to start a band? Overwhelmed about the minute amount of effort to
       think of band names, album titles, and song titles? Is your bassist
       starting to be the one coming up with all the names? Don't fret! We've got
@@ -13,26 +13,45 @@
       band wagon so you don't get left behind in the on coming AI apocalypse.
     </p>
   </div>
-</div>
-<div class="row">
-  {% for band in bands %}
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-body">
-        <img
-          src="{{ band.image }}"
-          class="card-img-top"
-          alt="{{ band.name }}"
-        />
-        <h5 class="card-title">{{ band.name }}</h5>
-        <p class="card-text">{{ band.bio }}</p>
-        <a
-          href="{{ url_for('show_band', band_id=band.id) }}"
-          class="btn btn-primary"
-          >View Band</a
-        >
+  <div class="col-md-12 text-center bg-row pt-5 pb-5 text-white">
+    <h1>Examples</h1>
+    <div class="row">
+      {% if bands %} {% for band in bands %}
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <img
+              src="{{ band.image }}"
+              class="card-img-top"
+              alt="{{ band.name }}"
+            />
+            <h5 class="card-title">{{ band.name }}</h5>
+            <p class="card-text">{{ band.bio }}</p>
+            <a
+              href="{{ url_for('show_band', band_id=band.id) }}"
+              class="btn btn-primary"
+              >View Band</a
+            >
+          </div>
+        </div>
       </div>
+      {% endfor %} {% endif %}
     </div>
   </div>
-  {% endfor %} {% endblock %}
+  <div class="col-md-12 text-end pt-5 pb-5">
+    <h1>Want to 'make' your own?</h1>
+    <p class="text-center">
+      <a
+        class="link-underline link-underline-opacity-0 link-underline-opacity-75-hover"
+        href="{{ url_for('signup') }}"
+        >Create an account</a
+      >
+      to get started! You'll be able to generate your own band with your choice
+      of genre and theme. Themes set the tone for what kind of data will be
+      generated. For example, an ironic theme will generate humorous data that
+      is focused on exaggeration of stereotypes. You'll also be able to like
+      other users bands.
+    </p>
+  </div>
 </div>
+{% endblock %}

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AlGen - {% block title %}{% endblock %}</title>
+    <title>AlbumGen - {% block title %}{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -31,7 +31,9 @@
   </head>
   <body>
     <header class="sticky-top">
-      <nav class="navbar navbar-expand-md navbar-dark bg-dark container-lg">
+      <nav
+        class="navbar navbar-expand-md navbar-dark rounded bg-dark container-lg"
+      >
         <div class="container-fluid">
           <div
             class="navbar-collapse collapse w-100 order-1 order-md-0 dual-collapse2"
@@ -43,7 +45,9 @@
             </ul>
           </div>
           <div class="mx-auto order-0">
-            <a class="navbar-brand mx-auto rock-font" href="#"
+            <a
+              class="navbar-brand mx-auto rock-font"
+              href="{{ url_for('show_homepage') }}"
               >Album Generator</a
             >
             <button
@@ -70,7 +74,7 @@
               </li>
               <li class="nav-item dropdown">
                 <a
-                  class="nav-link dropdown-toggle"
+                  class="nav-link dropdown-toggle {{ 'disabled' if 'email' in form }}"
                   href="#"
                   role="button"
                   data-bs-toggle="dropdown"
@@ -107,13 +111,10 @@
       </nav>
     </header>
     <section id="messages">
-      {% with messages = get_flashed_messages() %} {% if messages %} {% for msg
-      in messages %}
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for cat, msg in messages %}
       <div class="w-25 container-sm">
-        <div
-          class="alert-danger alert alert-dismissible fade show"
-          role="alert"
-        >
+        <div class="{{ cat }} alert alert-dismissible fade show" role="alert">
           {{ msg }}
           <button
             type="button"
@@ -130,5 +131,22 @@
         <div class="container-lg">{% block content %}{% endblock %}</div>
       </section>
     </div>
+    <footer class="bd-footer py-md-5 py-4 mt-5 bg-body-tertiary">
+      <div class="container py-4 py-md-5 px-4 px-md-3 text-body-secondary">
+        <div class="row">
+          <div class="col-6 col-lg-6">
+            <span class="text-start">2023 -- Casey Wittrock</span>
+          </div>
+          <div class="col-6 col-lg-6 text-end">
+            <span class="text-end"
+              ><a href="https://github.com/CAWittMN">GitHub</a></span
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script src="https://unpkg.com/axios/dist/axios.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+    <script src="/static/script.js"></script>
   </body>
 </html>

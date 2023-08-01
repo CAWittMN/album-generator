@@ -1,3 +1,21 @@
 .rock-font {
   font-family: "New Rocker", cursive;
 }
+
+.bg-row {
+  background-color: rgb(75, 16, 16);
+}
+
+.text-dull {
+  color: rgb(199, 166, 166);
+}
+
+.bd-sidebar {
+  position: sticky;
+  top: 5rem;
+  display: block;
+  height: calc(100vh - 6rem);
+  padding-left: 0.25rem;
+  margin-left: 0.25rem;
+  overflow-y: auto;
+}

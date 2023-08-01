@@ -30,9 +30,9 @@ class LoginForm(FlaskForm):
 
 
 class GenerateForm(FlaskForm):
-    additional_prompt = TextAreaField("Additional details")
     theme = StringField("Theme", validators=[InputRequired()])
     genre = SelectField("Genre", validators=[InputRequired()])
+    additional_prompt = TextAreaField("Additional details")
 
 
 class MemberForm(FlaskForm):

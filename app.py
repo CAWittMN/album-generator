@@ -29,7 +29,8 @@ from models import (
     Tag,
 )
 from forms import LoginForm, UserForm, BandForm, NewPasswordForm, GenerateForm
-from flask_mail import Mail, Message
+
+# from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
@@ -39,15 +40,15 @@ CURR_USER_KEY = "curr_user"
 SALT = os.environ.get("SALT", "tempkey")
 
 app = Flask(__name__)
-mail = Mail(app)
-serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY", "tempkey"))
+# mail = Mail(app)
+# serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY", "tempkey"))
 
-app.config["MAIL_SERVER"] = "smtp.mail.com"
-app.config["MAIL_PORT"] = 465
-app.config["MAIL_USE_SSL"] = True
-app.config["MAIL_USE_TLS"] = False
-app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME", "tempname")
-app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD", "temppassword")
+# app.config["MAIL_SERVER"] = "smtp.mail.com"
+# app.config["MAIL_PORT"] = 465
+# app.config["MAIL_USE_SSL"] = True
+# app.config["MAIL_USE_TLS"] = False
+# app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME", "tempname")
+# app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD", "temppassword")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "tempkey")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
     "DATABASE_URL", "postgresql:///album_generator"
@@ -114,8 +115,8 @@ def login():
 
         if user:
             do_login(user)
-            if user.validated == False:
-                return redirect(url_for("validate_email", user_id=user.id))
+            # if user.validated == False:
+            #    return redirect(url_for("validate_email", user_id=user.id))
             return redirect(url_for("logged_in_home"))
 
         flash("Invalid credentials.")
@@ -129,7 +130,7 @@ def logout():
     """Handle logout of user."""
 
     do_logout()
-    flash("Logged out.")
+    flash("Logged out.", "alert-success")
     return redirect(url_for("show_homepage"))
 
 
@@ -157,7 +158,8 @@ def signup():
             return redirect(url_for("signup"))
 
         do_login(user)
-        return redirect(url_for("send_validation_email"))
+        # return redirect(url_for('send_validation_email'))
+        return redirect(url_for("logged_in_home"))
 
     return render_template("signup.html", form=form)
 
@@ -166,66 +168,66 @@ def signup():
 # Email Validation Routes
 
 
-@app.route("/validate", methods=["GET"])
-def send_validation_email():
-    """Send validation email"""
-
-    if g.user == None:
-        return redirect(url_for("home"))
-
-    if g.user.validated == True:
-        flash("Your email is already validated!")
-        return redirect(url_for("logged_in_home"))
-
-    token = serializer.dumps(g.user.email, salt=SALT)
-    msg = Message(
-        "Confirm Email",
-        sender="NoReply@album-band-generator.com",
-        recipients=[g.user.email],
-    )
-    link = url_for("validate_email", user_id=g.user.id, token=token, _external=True)
-    msg.body = "Your validation link is {} and will expire in 3 hours.".format(link)
-    mail.send(msg)
-
-    return render_template("validate_email.html")
-
-
-@app.route("/validate/<int:user_id>/<token>")
-def validate_email(user_id, token):
-    """Validate user email"""
-
-    user = User.query.get_or_404(user_id)
-
-    if user.validated == True:
-        return redirect(url_for("show_homepage"))
-
-    try:
-        email = serializer.loads(token, salt=SALT, max_age=10800)
-    except SignatureExpired:
-        flash("The token is expired, please request a new one.")
-        return url_for("resend_validation", user_id=user_id)
-
-    except BadTimeSignature:
-        flash("The token is invalid. Please request a new one and try again.")
-        return url_for("resend_validation", user_id=user_id)
-
-    if user.email == email:
-        user.validated = True
-        db.session.commit()
-        do_login(user)
-        flash("Your email has been validated!")
-        return redirect(url_for("logged_in_home"))
-
-
-@app.route("/resend_validation/<int:user_id>", methods=["GET"])
-def resend_validation(user_id):
-    """Resend validation email"""
-
-    user = User.query.get_or_404(user_id)
-    if user.validated == True:
-        return redirect(url_for("show_homepage"))
-
-    return render_template("resend_validation.html", user=user)
+# @app.route("/validate", methods=["GET"])
+# def send_validation_email():
+#     """Send validation email"""
+#
+#     if g.user == None:
+#         return redirect(url_for("home"))
+#
+#     if g.user.validated == True:
+#         flash("Your email is already validated!")
+#         return redirect(url_for("logged_in_home"))
+#
+#     token = serializer.dumps(g.user.email, salt=SALT)
+#     msg = Message(
+#         "Confirm Email",
+#         sender="NoReply@album-band-generator.com",
+#         recipients=[g.user.email],
+#     )
+#     link = url_for("validate_email", user_id=g.user.id, token=token, _external=True)
+#     msg.body = "Your validation link is {} and will expire in 3 hours.".format(link)
+#     mail.send(msg)
+#
+#     return render_template("validate_email.html")
+#
+#
+# @app.route("/validate/<int:user_id>/<token>")
+# def validate_email(user_id, token):
+#     """Validate user email"""
+#
+#     user = User.query.get_or_404(user_id)
+#
+#     if user.validated == True:
+#         return redirect(url_for("show_homepage"))
+#
+#     try:
+#         email = serializer.loads(token, salt=SALT, max_age=10800)
+#     except SignatureExpired:
+#         flash("The token is expired, please request a new one.")
+#         return url_for("resend_validation", user_id=user_id)
+#
+#     except BadTimeSignature:
+#         flash("The token is invalid. Please request a new one and try again.")
+#         return url_for("resend_validation", user_id=user_id)
+#
+#     if user.email == email:
+#         user.validated = True
+#         db.session.commit()
+#         do_login(user)
+#         flash("Your email has been validated!")
+#         return redirect(url_for("logged_in_home"))
+#
+#
+# @app.route("/resend_validation/<int:user_id>", methods=["GET"])
+# def resend_validation(user_id):
+#     """Resend validation email"""
+#
+#     user = User.query.get_or_404(user_id)
+#     if user.validated == True:
+#         return redirect(url_for("show_homepage"))
+#
+#     return render_template("resend_validation.html", user=user)
 
 
 #########################################################################################
@@ -236,11 +238,13 @@ def resend_validation(user_id):
 def logged_in_home():
     if not g.user:
         return redirect(url_for("show_homepage"))
-    if g.user.validated == False:
-        flash("Please validate your email to continue.")
-        return redirect(url_for("resend_validation", user_id=g.user.id))
-
-    return render_template("logged_in_home.html", user=g.user)
+    # if g.user.validated == False:
+    #    flash("Please validate your email to continue.")
+    #    return redirect(url_for("resend_validation", user_id=g.user.id))
+    #
+    form = GenerateForm()
+    form.genre.choices = [(genre.id, genre.name) for genre in Genre.query.all()]
+    return render_template("logged_in_home.html", form=form, user=g.user)
 
 
 @app.route("/users/<int:user_id>")
@@ -359,63 +363,121 @@ def delete_band(band_id):
     return redirect(url_for("logged_in_home"))
 
 
-@app.route("/bands/new", methods=["GET", "POST"])
-def generate_band():
-    """Create a new band"""
-
-    if not g.user:
-        flash("Access unauthorized.")
-        return redirect(url_for("show_homepage"))
-
-    form = GenerateForm()
-
-    if form.validate_on_submit():
-        prompt = generate_band_prompt(form.theme.data, form.genre.data)
-        response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=prompt)
-        data = json.loads(response["choices"][0]["text"].strip())
-
-        return redirect(url_for("confirm_band", data=data))
-
-    return render_template("new_band.html", form=form)
-
-
-@app.route("/bands/confirm", methods=["GET", "POST"])
-def confirm_band():
-    """Confirm band details"""
-
-    if not g.user:
-        flash("Access unauthorized.")
-        return redirect(url_for("show_homepage"))
-
-    form = BandForm(obj=band)
-
-    if form.validate_on_submit():
-        Band.register_band(
-            user=g.user,
-            name=form.name.data,
-            theme=form.theme.data,
-            genre=form.genre.data,
-            additional_prompt=form.additional_prompt.data,
-            tags=form.tags.data,
-        )
-        return redirect(url_for("logged_in_home"))
-
-    return render_template("confirm_band.html", form=form)
+# @app.route("/bands/confirm", methods=["GET", "POST"])
+# def confirm_band():
+#    """Confirm band details"""
+#
+#    if not g.user:
+#        flash("Access unauthorized.")
+#        return redirect(url_for("show_homepage"))
+#
+#    form = BandForm(obj=band)
+#
+#    if form.validate_on_submit():
+#        Band.register_band(
+#            user=g.user,
+#            name=form.name.data,
+#            theme=form.theme.data,
+#            genre=form.genre.data,
+#            additional_prompt=form.additional_prompt.data,
+#            tags=form.tags.data,
+#        )
+#        return redirect(url_for("logged_in_home"))
+#
+#    return render_template("confirm_band.html", form=form)
 
 
 #########################################################################################
 # API Routes
 
 
-@app.route("/api/bands/generate")
-def generate_ban_api():
+###########################
+# OpenAI API Routes
+
+
+def generate_band_prompt(theme, genre):
+    """Generate a prompt for a band"""
+
+    prompt = [
+        {
+            "role": "system",
+            "content": f"You are a data generating bot and have an extremely {theme} personality and will generate data for a fake band with a name, short biography, members, an album, and songs for that album. The names, titles, and bio you generate will reflect your {theme} personality and the data will be in json format. You will format the data like so: {{name:, bio:, members: [{{name:, role:}}], album: {{title:, songs: [{{title:, duration_seconds:}}]}}",
+        },
+        {
+            "role": "user",
+            "content": f"Generate a {genre} band.",
+        },
+    ]
+
+    return prompt
+
+
+def generate_band_img_prompt(theme, genre, band_name):
+    """Generate a prompt for a band image"""
+
+    prompt = f"Generate an image for the fictional {genre} band {band_name}. The image should show the members standing around and be typical of a band of the genre. The image will also have a obvious {theme} theme to it. "
+    return prompt
+
+
+def generate_album_artwork_prompt(theme, genre, band_name, album_name):
+    """Generate a prompt for an album artwork"""
+
+    prompt = f"Generate an image for the fictional {genre} band {band_name}'s album {album_name}. The image should be typical of a band of the genre. The image will also have a obvious {theme} theme to it. "
+    return prompt
+
+
+@app.route("/api/bands/generate/<theme>/<genre_id>", methods=["GET"])
+def generate_band_api(theme, genre_id):
     """Generate a new band"""
-
-    prompt = generate_prompt(request.json["theme"], request.json["genre"])
+    print(theme, genre_id)
+    genre = Genre.query.get_or_404(genre_id)
+    prompt = generate_band_prompt(theme=theme, genre=genre.name)
     response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=prompt)
-    data = json.loads(response["choices"][0]["text"].strip())
+    text = response["choices"][0].message.content.strip()
+    data = json.loads(text)
 
-    return jsonify(data)
+    return jsonify(data=data)
+
+
+@app.route("/api/bands/generate-img/<theme>/<genre_id>/<band_name>", methods=["GET"])
+def generate_band_img_api(theme, genre_id, band_name):
+    """Generate a band image"""
+    genre = Genre.query.get_or_404(genre_id)
+    prompt = generate_band_img_prompt(
+        theme=theme, genre=genre.name, band_name=band_name
+    )
+    response = openai.Image.create(
+        prompt=prompt,
+        n=1,
+        size="512x512",
+    )
+    print(response)
+    image_url = response["images"][0]
+    return jsonify(image_url=image_url)
+
+
+@app.route(
+    "/api/bands/generate-album-artwork/<theme>/<genre_id>/<band_name>/<album_name>",
+    methods=["GET"],
+)
+def generate_album_artwork_api(theme, genre_id, band_name, album_name):
+    """Generate an album artwork"""
+    genre = Genre.query.get_or_404(genre_id)
+    prompt = generate_album_artwork_prompt(
+        theme=theme, genre=genre.name, band_name=band_name, album_name=album_name
+    )
+    response = openai.Image.create(
+        prompt=prompt,
+        n=1,
+        size="512x512",
+    )
+    print(response)
+    image_url = response["images"][0]
+    return jsonify(image_url=image_url)
+
+
+###########################
+# RESTful API Routes
 
 
 @app.route("/api/bands/post", methods=["POST"])
@@ -503,7 +565,7 @@ def get_bands_by_genre_and_theme(genre_id, theme):
     return jsonify(bands=bands)
 
 
-@app.route("/api/bands/genre/<int:genre_id>/theme/<string:theme>/tags/")
+@app.route("/api/bands/genre/<int:genre_id>/theme/<string:theme>/tags")
 def get_bands_by_genre_theme_and_tags(genre_id, theme):
     """Return a list of bands by genre id and theme."""
 
@@ -516,3 +578,12 @@ def get_bands_by_genre_theme_and_tags(genre_id, theme):
     ]
 
     return jsonify(bands=bands)
+
+
+@app.route("/api/genre/<int:genre_id>")
+def get_genre(genre_id):
+    """Return a genre by id sorted alphabetically."""
+
+    genre = Genre.query.get_or_404(genre_id)
+
+    return jsonify(genre=genre.to_dict())
