@@ -18,20 +18,19 @@ from sqlalchemy.exc import IntegrityError
 from models import (
     connect_to_db,
     db,
-    generate_band_prompt,
     bcrypt,
     User,
     Band,
     Album,
     Song,
-    Like,
+    # Like,
     Genre,
-    Tag,
+    # Tag,
 )
 from forms import LoginForm, UserForm, BandForm, NewPasswordForm, GenerateForm
 
 # from flask_mail import Mail, Message
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
+# from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 openai.Model.list()
@@ -57,6 +56,104 @@ toolbar = DebugToolbarExtension(app)
 
 
 connect_to_db(app)
+
+test_band = """{
+    "name": "The Beatles",
+    "bio": "The Beatles were an English rock band formed in Liverpool in 1960. The group, whose best-known line-up comprised John Lennon, Paul McCartney, George Harrison and Ringo Starr, are regarded as the most influential band of all time. They were integral to the development of 1960s counterculture and popular music's recognition as an art form. Rooted in skiffle, beat and 1950s rock and roll, their sound incorporated elements of classical music and traditional pop in innovative ways; the band later explored music styles ranging from ballads and Indian music to psychedelia and hard rock. As pioneers in recording, songwriting and artistic presentation, the group revolutionised many aspects of the music industry and were often publicised as leaders of the era's youth and sociocultural movements.",
+    "members": [
+        {
+            "name": "John Lennon",
+            "role": "guitar"
+        },
+        {
+            "name": "Paul McCartney",
+            "role": "bass"
+        },
+        {
+            "name": "George Harrison",
+            "role": "guitar"
+        }, 
+        {
+            "name": "Ringo Starr",
+            "role": "drums"
+        }
+    ],
+    "albums": [ 
+        {
+            "title": "Abbey Road",
+            "songs": [
+                {
+                    "title": "Come Together",
+                    "duration_seconds": 259
+                },
+                {
+                    "title": "Something",
+                    "duration_seconds": 182
+                },
+                {
+                    "title": "Maxwell's Silver Hammer",
+                    "duration_seconds": 203
+                },
+                {
+                    "title": "Oh! Darling",
+                    "duration_seconds": 210
+                },
+                {
+                    "title": "Octopus's Garden",
+                    "duration_seconds": 177
+                },
+                {
+                    "title": "I Want You (She's So Heavy)",
+                    "duration_seconds": 467
+                },
+                {
+                    "title": "Here Comes the Sun",
+                    "duration_seconds": 185
+                },
+                {
+                    "title": "Because",
+                    "duration_seconds": 163
+                },
+                {
+                    "title": "You Never Give Me Your Money",
+                    "duration_seconds": 252
+                },
+                {
+                    "title": "Sun King",
+                    "duration_seconds": 156
+                },
+                {
+                    "title": "Mean Mr. Mustard",
+                    "duration_seconds": 86
+                },
+                {
+                    "title": "Polythene Pam",
+                    "duration_seconds": 83
+                },
+                {
+                    "title": "She Came in Through the Bathroom Window",
+                    "duration_seconds": 129
+                },
+                {
+                    "title": "Golden Slumbers",
+                    "duration_seconds": 91
+                },
+                {
+                    "title": "Carry That Weight",
+                    "duration_seconds": 90
+                },
+                {
+                    "title": "The End",
+                    "duration_seconds": 124
+                },
+                {
+                    "title": "Her Majesty",
+                    "duration_seconds": 23
+                }
+            ]
+        }
+    ]
+}"""
 
 
 @app.before_request
@@ -243,7 +340,7 @@ def logged_in_home():
     #    return redirect(url_for("resend_validation", user_id=g.user.id))
     #
     form = GenerateForm()
-    form.genre.choices = [(genre.id, genre.name) for genre in Genre.query.all()]
+    form.genre.choices = [(genre.name, genre.name) for genre in Genre.query.all()]
     return render_template("logged_in_home.html", form=form, user=g.user)
 
 
@@ -335,18 +432,18 @@ def show_band(band_id):
     return render_template("band.html", band=band)
 
 
-@app.route("/api/bands/<int:band_id>/like/<int:user_id>", methods=["POST"])
-def add_remove_like_band(band_id, user_id):
-    """Like a band"""
-
-    user = User.query.get(user_id)
-    band = Band.query.get(band_id)
-    if band in user.liked_bands:
-        user.liked_bands.remove(band)
-    else:
-        user.liked_bands.append(band)
-    db.session.commit()
-    return jsonify({"success": True})
+# @app.route("/api/bands/<int:band_id>/like/<int:user_id>", methods=["POST"])
+# def add_remove_like_band(band_id, user_id):
+#     """Like a band"""
+#
+#     user = User.query.get(user_id)
+#     band = Band.query.get(band_id)
+#     if band in user.liked_bands:
+#         user.liked_bands.remove(band)
+#     else:
+#         user.liked_bands.append(band)
+#     db.session.commit()
+#     return jsonify({"success": True})
 
 
 @app.route("/bands/<int:band_id>./delete", methods=["POST"])
@@ -395,56 +492,55 @@ def delete_band(band_id):
 # OpenAI API Routes
 
 
-def generate_band_prompt(theme, genre):
+def generate_band_prompt(theme, genre, add_prompt):
     """Generate a prompt for a band"""
 
     prompt = [
         {
             "role": "system",
-            "content": f"You are a data generating bot and have an extremely {theme} personality and will generate data for a fake band with a name, short biography, members, an album, and songs for that album. The names, titles, and bio you generate will reflect your {theme} personality and the data will be in json format. You will format the data like so: {{name:, bio:, members: [{{name:, role:}}], album: {{title:, songs: [{{title:, duration_seconds:}}]}}",
+            "content": f"You are a data generating bot and have an extremely {theme} personality and will generate data for a fake band with a name, short biography, members, an album, and songs for that album. The names, titles, and bio you generate will reflect your {theme} personality and the data will be in json format. You will format the data like so: {{name:, bio:, members: [{{name:, role:}}], albums: [{{title:, songs: [{{title:, duration_seconds:}}]}}]}}",
         },
         {
             "role": "user",
-            "content": f"Generate a {genre} band.",
+            "content": f"Generate a {genre} band. {add_prompt}",
         },
     ]
 
     return prompt
 
 
-def generate_band_img_prompt(theme, genre, band_name):
+def generate_band_img_prompt(theme, genre, members_num, add_prompt):
     """Generate a prompt for a band image"""
-
-    prompt = f"Generate an image for the fictional {genre} band {band_name}. The image should show the members standing around and be typical of a band of the genre. The image will also have a obvious {theme} theme to it. "
+    prompt = f"A {theme}, studio photographic, group photo of a {genre} band with {members_num} members. {add_prompt}"
     return prompt
 
 
-def generate_album_artwork_prompt(theme, genre, band_name, album_name):
+def generate_album_artwork_prompt(theme, genre, band_name, album_name, add_prompt):
     """Generate a prompt for an album artwork"""
 
-    prompt = f"Generate an image for the fictional {genre} band {band_name}'s album {album_name}. The image should be typical of a band of the genre. The image will also have a obvious {theme} theme to it. "
+    prompt = f"Album art for a {genre} band named '{band_name}'. The album name is {album_name}.  An obvious {theme} theme. {add_prompt}"
     return prompt
 
 
-@app.route("/api/bands/generate/<theme>/<genre_id>", methods=["GET"])
-def generate_band_api(theme, genre_id):
+@app.route("/api/generate/band-data/<theme>/<genre>/<add_prompt>", methods=["GET"])
+def generate_band_data_api(theme, genre, add_prompt):
     """Generate a new band"""
-    print(theme, genre_id)
-    genre = Genre.query.get_or_404(genre_id)
-    prompt = generate_band_prompt(theme=theme, genre=genre.name)
+    prompt = generate_band_prompt(theme=theme, genre=genre, add_prompt=add_prompt)
     response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=prompt)
     text = response["choices"][0].message.content.strip()
+    print(text)
     data = json.loads(text)
-
+    # data = json.loads(test_band.strip())
     return jsonify(data=data)
 
 
-@app.route("/api/bands/generate-img/<theme>/<genre_id>/<band_name>", methods=["GET"])
-def generate_band_img_api(theme, genre_id, band_name):
+@app.route(
+    "/api/generate/img/<theme>/<genre>/<int:members_num>/<add_prompt>", methods=["GET"]
+)
+def generate_band_img_api(theme, genre, members_num, add_prompt):
     """Generate a band image"""
-    genre = Genre.query.get_or_404(genre_id)
     prompt = generate_band_img_prompt(
-        theme=theme, genre=genre.name, band_name=band_name
+        theme=theme, genre=genre, members_num=members_num, add_prompt=add_prompt
     )
     response = openai.Image.create(
         prompt=prompt,
@@ -452,19 +548,23 @@ def generate_band_img_api(theme, genre_id, band_name):
         size="512x512",
     )
     print(response)
-    image_url = response["images"][0]
-    return jsonify(image_url=image_url)
+    url = response["data"][0]["url"]
+    # url = "test.com"
+    return jsonify(url=url)
 
 
 @app.route(
-    "/api/bands/generate-album-artwork/<theme>/<genre_id>/<band_name>/<album_name>",
+    "/api/generate/album-art/<theme>/<genre>/<band_name>/<album_name>/<add_prompt>",
     methods=["GET"],
 )
-def generate_album_artwork_api(theme, genre_id, band_name, album_name):
+def generate_album_artwork_api(theme, genre, band_name, album_name, add_prompt):
     """Generate an album artwork"""
-    genre = Genre.query.get_or_404(genre_id)
     prompt = generate_album_artwork_prompt(
-        theme=theme, genre=genre.name, band_name=band_name, album_name=album_name
+        theme=theme,
+        genre=genre,
+        band_name=band_name,
+        album_name=album_name,
+        add_prompt=add_prompt,
     )
     response = openai.Image.create(
         prompt=prompt,
@@ -472,8 +572,9 @@ def generate_album_artwork_api(theme, genre_id, band_name, album_name):
         size="512x512",
     )
     print(response)
-    image_url = response["images"][0]
-    return jsonify(image_url=image_url)
+    url = response["data"][0]["url"]
+    # url = "test.com"
+    return jsonify(url=url)
 
 
 ###########################
@@ -483,15 +584,15 @@ def generate_album_artwork_api(theme, genre_id, band_name, album_name):
 @app.route("/api/bands/post", methods=["POST"])
 def post_band():
     data = request.json
-    tags_list = data["tags"]
-    tags = Tag.query.filter(Tag.name.in_(tags_list)).all()
+    # tags_list = data["tags"]
+    # tags = Tag.query.filter(Tag.name.in_(tags_list)).all()
     Band.register_band(
         user=g.user,
         name=data["name"],
         theme=data["theme"],
         genre=data["genre"],
         additional_prompt=data["additional_prompt"],
-        tags=data["tags"],
+        # tags=data["tags"],
     )
 
 
@@ -524,15 +625,15 @@ def get_bands_by_like_name(name):
     return jsonify(bands=bands)
 
 
-@app.route("/api/bands/tags/")
-def get_bands_by_tags():
-    """Return a list of bands by tags"""
-
-    tags = request.args.getlist("tags")
-    bands = [
-        band.to_dict()
-        for band in Band.query.filter(Band.tags.any(Tag.name.in_(tags))).all()
-    ]
+# @app.route("/api/bands/tags/")
+# def get_bands_by_tags():
+#     """Return a list of bands by tags"""
+#
+#     tags = request.args.getlist("tags")
+#     bands = [
+#         band.to_dict()
+#         for band in Band.query.filter(Band.tags.any(Tag.name.in_(tags))).all()
+#     ]
 
 
 @app.route("/api/bands/genre/<int:genre_id>")
@@ -565,25 +666,25 @@ def get_bands_by_genre_and_theme(genre_id, theme):
     return jsonify(bands=bands)
 
 
-@app.route("/api/bands/genre/<int:genre_id>/theme/<string:theme>/tags")
-def get_bands_by_genre_theme_and_tags(genre_id, theme):
-    """Return a list of bands by genre id and theme."""
+# @app.route("/api/bands/genre/<int:genre_id>/theme/<string:theme>/tags")
+# def get_bands_by_genre_theme_and_tags(genre_id, theme):
+#     """Return a list of bands by genre id and theme."""
+#
+#     tags = request.args.getlist("tags")
+#     bands = [
+#         band.to_dict()
+#         for band in Band.query.filter_by(genre_id=genre_id, theme=theme)
+#         .filter(Band.tags.any(Tag.name.in_(tags)))
+#         .all()
+#     ]
+#
+#     return jsonify(bands=bands)
 
-    tags = request.args.getlist("tags")
-    bands = [
-        band.to_dict()
-        for band in Band.query.filter_by(genre_id=genre_id, theme=theme)
-        .filter(Band.tags.any(Tag.name.in_(tags)))
-        .all()
-    ]
 
-    return jsonify(bands=bands)
+@app.route("/api/genre/<genre_name>")
+def get_genre(genre_name):
+    """Return a genre by name."""
 
-
-@app.route("/api/genre/<int:genre_id>")
-def get_genre(genre_id):
-    """Return a genre by id sorted alphabetically."""
-
-    genre = Genre.query.get_or_404(genre_id)
+    genre = Genre.query.filter_by(name=genre_name).first()
 
     return jsonify(genre=genre.to_dict())

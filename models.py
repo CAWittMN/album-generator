@@ -7,38 +7,6 @@ bcrypt = Bcrypt()
 db = SQLAlchemy()
 
 
-def generate_band_prompt(theme, genre, additional_prompt=""):
-    """Generate a prompt for the user to use in the API call"""
-    prompt = [
-        {
-            "roll": "system",
-            "content": f"You are a {theme} data generator bot that will generate json data for a fictional band with a short biography, members, album, and songs for the album with song duration in seconds. The nature of this response will be {theme} and in the format of name:, bio:, members: [name:, role:], album: [title:, songs: [title:, duration_seconds:]",
-        },
-        {
-            "roll": "user",
-            "content": f"Generate a {genre} band. {additional_prompt}",
-        },
-    ]
-    return prompt
-
-
-def generate_new_album_prompt(band, additional_prompt=""):
-    prompt = [
-        {
-            "roll": "system",
-            "content": f"You are a {band.theme} data generator bot that will generate json data for an album by a provided fictional band with songs for the album. The nature of this response will be {band.theme} and in the format of title:, songs: [title:, duration_seconds:]",
-        },
-        {
-            "roll": "user",
-            "content": f"Generate an album for the {band.genre.name} band {band.name}. {additional_prompt}",
-        },
-    ]
-
-
-def generate_album_artwork_prompt(band):
-    prompt = []
-
-
 class User(db.Model):
     """User model with references to bands, albums, songs, and likes"""
 
@@ -51,9 +19,9 @@ class User(db.Model):
     last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False)
     password = db.Column(db.String, nullable=False)
-    validated = db.Column(db.Boolean, default=False)
+    # validated = db.Column(db.Boolean, default=False)
 
-    liked_bands = db.relationship("Band", secondary="likes", backref="user_likes")
+    # liked_bands = db.relationship("Band", secondary="likes", backref="user_likes")
 
     bands = db.relationship("Band", backref="user", cascade="all, delete-orphan")
     albums = db.relationship("Album", backref="user", cascade="all, delete-orphan")
@@ -107,12 +75,14 @@ class Band(db.Model):
     bio = db.Column(db.String, nullable=False)
     genre_id = db.Column(db.Integer, db.ForeignKey("genres.id"))
     theme = db.Column(db.String, nullable=False)
+    prompt = db.Column(db.String, nullable=False, default="")
     photo_url = db.Column(db.String)  # nullable=False)
 
+    genre = db.relationship("Genre", backref="bands")
     members = db.relationship("Member", backref="band", cascade="all, delete-orphan")
     albums = db.relationship("Album", backref="band", cascade="all, delete-orphan")
     songs = db.relationship("Song", backref="band", cascade="all, delete-orphan")
-    tags = db.relationship("Tag", secondary="tags_bands", backref="bands")
+    # tags = db.relationship("Tag", secondary="tags_bands", backref="bands")
 
     @classmethod
     def register_band(cls, user, name, bio, genre_id, theme):
@@ -126,7 +96,7 @@ class Band(db.Model):
     def to_dict(self):
         album_list = [album.to_dict() for album in self.albums]
         member_list = [member.to_dict() for member in self.members]
-        tag_list = [tag.name for tag in self.tags]
+        # tag_list = [tag.name for tag in self.tags]
 
         return {
             "id": self.id,
@@ -138,7 +108,7 @@ class Band(db.Model):
             "theme": self.theme,
             "photo_url": self.photo_url,
             "albums": album_list,
-            "tags": tag_list,
+            # "tags": tag_list,
         }
 
 
@@ -173,6 +143,7 @@ class Album(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     title = db.Column(db.String, nullable=False)
     artwork_url = db.Column(db.String, nullable=False)
+    prompt = db.Column(db.String, nullable=False, default="")
 
     songs = db.relationship("Song", backref="album", cascade="all, delete-orphan")
 
@@ -225,14 +196,14 @@ class Song(db.Model):
             db.session.add(new_song)
             db.session.commit()
 
-        def to_dict(self):
-            """Return a dictionary of the song data"""
+    def to_dict(self):
+        """Return a dictionary of the song data"""
 
-            return {
-                "id": self.id,
-                "title": self.title,
-                "duration_seonds": self.duration_seconds,
-            }
+        return {
+            "id": self.id,
+            "title": self.title,
+            "duration_seonds": self.duration_seconds,
+        }
 
 
 class Genre(db.Model):
@@ -252,35 +223,35 @@ class Genre(db.Model):
         }
 
 
-class Tag(db.Model):
-    __tablename__ = "tags"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-
-
-class Tag_Band(db.Model):
-    __tablename__ = "tags_bands"
-
-    tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"), primary_key=True)
-    band_id = db.Column(db.Integer, db.ForeignKey("bands.id"), primary_key=True)
+# class Tag(db.Model):
+#     __tablename__ = "tags"
+#
+#     id = db.Column(db.Integer, primary_key=True)
+#     name = db.Column(db.String, nullable=False)
 
 
-class Like(db.Model):
-    """Likes model"""
+# class Tag_Band(db.Model):
+#     __tablename__ = "tags_bands"
+#
+#     tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"), primary_key=True)
+#     band_id = db.Column(db.Integer, db.ForeignKey("bands.id"), primary_key=True)
 
-    __tablename__ = "likes"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    band_id = db.Column(db.Integer, db.ForeignKey("bands.id"))
-
-    @classmethod
-    def add_like(cls, user, band):
-        new_like = cls(user_id=user.id, band_id=band.id)
-        user.liked_bands.append(band)
-        db.session.add(new_like)
-        db.session.commit()
+# class Like(db.Model):
+#     """Likes model"""
+#
+#     __tablename__ = "likes"
+#
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+#     band_id = db.Column(db.Integer, db.ForeignKey("bands.id"))
+#
+#     @classmethod
+#     def add_like(cls, user, band):
+#         new_like = cls(user_id=user.id, band_id=band.id)
+#         user.liked_bands.append(band)
+#         db.session.add(new_like)
+#         db.session.commit()
 
 
 def connect_to_db(app):
