@@ -163,7 +163,12 @@ class Controller {
     this.model.$genreInput.on("change", async () =>
       this.handleGenreDescription()
     );
+this.view.$save.btn.on("click", async () => this.handleSave()
   }
+
+async handleSave() {
+return
+}
 
   async handleSubmit(e) {
     e.preventDefault();
