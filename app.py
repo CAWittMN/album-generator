@@ -24,10 +24,11 @@ from models import (
     Album,
     Song,
     # Like,
+    Member,
     Genre,
     # Tag,
 )
-from forms import LoginForm, UserForm, BandForm, NewPasswordForm, GenerateForm
+from forms import LoginForm, UserForm, NewPasswordForm, GenerateForm
 
 # from flask_mail import Mail, Message
 # from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
@@ -344,15 +345,15 @@ def logged_in_home():
     return render_template("logged_in_home.html", form=form, user=g.user)
 
 
-@app.route("/users/<int:user_id>")
-def show_user(user_id):
-    """Show user details"""
-
-    if g.user.id == user_id:
-        return redirect(url_for("logged_in_home"))
-
-    user = User.query.get_or_404(user_id)
-    return render_template("user.html", user=user)
+# def show_user(user_id):
+# @app.route("/users/<int:user_id>")
+#     """Show user details"""
+#
+#     if g.user.id == user_id:
+#         return redirect(url_for("logged_in_home"))
+#
+#     user = User.query.get_or_404(user_id)
+#     return render_template("user.html", user=user)
 
 
 @app.route("/users/<int:user_id>/delete", methods=["POST"])
@@ -460,28 +461,18 @@ def delete_band(band_id):
     return redirect(url_for("logged_in_home"))
 
 
-# @app.route("/bands/confirm", methods=["GET", "POST"])
-# def confirm_band():
-#    """Confirm band details"""
-#
-#    if not g.user:
-#        flash("Access unauthorized.")
-#        return redirect(url_for("show_homepage"))
-#
-#    form = BandForm(obj=band)
-#
-#    if form.validate_on_submit():
-#        Band.register_band(
-#            user=g.user,
-#            name=form.name.data,
-#            theme=form.theme.data,
-#            genre=form.genre.data,
-#            additional_prompt=form.additional_prompt.data,
-#            tags=form.tags.data,
-#        )
-#        return redirect(url_for("logged_in_home"))
-#
-#    return render_template("confirm_band.html", form=form)
+@app.route("/albums/<int:album_id>./delete", methods=["POST"])
+def delete_album(album_id):
+    """Delete album"""
+
+    album = Album.query.get_or_404(album_id)
+    if g.user.id != album.user_id:
+        flash("Access unauthorized.")
+        return redirect(url_for("show_homepage"))
+    db.session.delete(album)
+    db.session.commit()
+    flash("Album deleted.")
+    return redirect(url_for("show_band", band_id=album.band_id))
 
 
 #########################################################################################
@@ -498,7 +489,7 @@ def generate_band_prompt(theme, genre, add_prompt):
     prompt = [
         {
             "role": "system",
-            "content": f"You are a data generating bot and have an extremely {theme} personality and will generate data for a fake band with a name, short biography, members, an album, and songs for that album. The names, titles, and bio you generate will reflect your {theme} personality and the data will be in json format. You will format the data like so: {{name:, bio:, members: [{{name:, role:}}], albums: [{{title:, songs: [{{title:, duration_seconds:}}]}}]}}",
+            "content": f"You are a data generating bot and will generate data for a {theme} reflection of a band with a name, short biography origin story, members, an album, and songs for that album. The data you generate will be a {theme} reflection of the genre and the data will be in json format. You will format the data like so: {{name:, bio:, members: [{{name:, role:}}], albums: [{{title:, songs: [{{title:, duration_seconds:}}]}}]}}",
         },
         {
             "role": "user",
@@ -518,7 +509,7 @@ def generate_band_img_prompt(theme, genre, members_num, add_prompt):
 def generate_album_artwork_prompt(theme, genre, band_name, album_name, add_prompt):
     """Generate a prompt for an album artwork"""
 
-    prompt = f"Album art for a {genre} band named '{band_name}'. The album name is {album_name}.  An obvious {theme} theme. {add_prompt}"
+    prompt = f"Album art for a {genre} band named '{band_name}'. The album name is {album_name} and has an obvious {theme} theme. {add_prompt}"
     return prompt
 
 
@@ -581,19 +572,28 @@ def generate_album_artwork_api(theme, genre, band_name, album_name, add_prompt):
 # RESTful API Routes
 
 
-@app.route("/api/bands/post", methods=["POST"])
+@app.route("/api/band", methods=["POST"])
 def post_band():
-    data = request.json
+    """Create a new band"""
+    band_data = request.json
+    user = User.query.get_or_404(g.user.id)
+    genre = Genre.query.filter_by(name=band_data["genre"]).first()
     # tags_list = data["tags"]
     # tags = Tag.query.filter(Tag.name.in_(tags_list)).all()
-    Band.register_band(
-        user=g.user,
-        name=data["name"],
-        theme=data["theme"],
-        genre=data["genre"],
-        additional_prompt=data["additional_prompt"],
-        # tags=data["tags"],
-    )
+    band = Band.register_band(band_data=band_data, genre=genre, user=user)
+    for member in band_data["members"]:
+        new_member = Member.make_member(member=member, band_id=band.id)
+        band.members.append(new_member)
+
+    album = Album.make_album(band=band, album=band_data["albums"][0], user_id=g.user.id)
+    for song in band_data["albums"][0]["songs"]:
+        new_song = Song.make_song(
+            song=song, album_id=album.id, user_id=g.user.id, band_id=band.id
+        )
+        album.songs.append(new_song)
+    band.albums.append(album)
+    db.session.commit()
+    return jsonify(band=band.to_dict())
 
 
 @app.route("/api/bands")
@@ -614,15 +614,15 @@ def get_band(band_id):
     return jsonify(band=band.to_dict())
 
 
-@app.route("/api/bands/name/<string:name>")
-def get_bands_by_like_name(name):
-    """Return a list of bands by name"""
-
-    bands = [
-        band.to_dict() for band in Band.query.filter(Band.name.ilike(f"%{name}%")).all()
-    ]
-
-    return jsonify(bands=bands)
+# @app.route("/api/bands/name/<string:name>")
+# def get_bands_by_like_name(name):
+#    """Return a list of bands by name"""
+#
+#    bands = [
+#        band.to_dict() for band in Band.query.filter(Band.name.ilike(f"%{name}%")).all()
+#    ]
+#
+#    return jsonify(bands=bands)
 
 
 # @app.route("/api/bands/tags/")
@@ -636,34 +636,34 @@ def get_bands_by_like_name(name):
 #     ]
 
 
-@app.route("/api/bands/genre/<int:genre_id>")
-def get_bands_by_genre(genre_id):
-    """Return a list of bands by genre id."""
-
-    bands = [band.to_dict() for band in Band.query.filter_by(genre_id=genre_id).all()]
-
-    return jsonify(bands=bands)
-
-
-@app.route("/api/bands/theme/<string:theme>")
-def get_bands_by_theme(theme):
-    """Return a list of bands by theme."""
-
-    bands = [band.to_dict() for band in Band.query.filter_by(theme=theme).all()]
-
-    return jsonify(bands=bands)
+# @app.route("/api/bands/genre/<int:genre_id>")
+# def get_bands_by_genre(genre_id):
+#    """Return a list of bands by genre id."""
+#
+#    bands = [band.to_dict() for band in Band.query.filter_by(genre_id=genre_id).all()]
+#
+#    return jsonify(bands=bands)
 
 
-@app.route("/api/bands/genre/<int:genre_id>/theme/<string:theme>")
-def get_bands_by_genre_and_theme(genre_id, theme):
-    """Return a list of bands by genre id and theme."""
+# @app.route("/api/bands/theme/<string:theme>")
+# def get_bands_by_theme(theme):
+#    """Return a list of bands by theme."""
+#
+#    bands = [band.to_dict() for band in Band.query.filter_by(theme=theme).all()]
+#
+#    return jsonify(bands=bands)
 
-    bands = [
-        band.to_dict()
-        for band in Band.query.filter_by(genre_id=genre_id, theme=theme).all()
-    ]
 
-    return jsonify(bands=bands)
+# @app.route("/api/bands/genre/<int:genre_id>/theme/<string:theme>")
+# def get_bands_by_genre_and_theme(genre_id, theme):
+#    """Return a list of bands by genre id and theme."""
+#
+#    bands = [
+#        band.to_dict()
+#        for band in Band.query.filter_by(genre_id=genre_id, theme=theme).all()
+#    ]
+#
+#    return jsonify(bands=bands)
 
 
 # @app.route("/api/bands/genre/<int:genre_id>/theme/<string:theme>/tags")
@@ -684,7 +684,5 @@ def get_bands_by_genre_and_theme(genre_id, theme):
 @app.route("/api/genre/<genre_name>")
 def get_genre(genre_name):
     """Return a genre by name."""
-
     genre = Genre.query.filter_by(name=genre_name).first()
-
     return jsonify(genre=genre.to_dict())

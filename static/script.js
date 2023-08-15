@@ -6,7 +6,8 @@ class Band {
     this.theme;
     this.members = band.members;
     this.albums = band.albums;
-    this.bandImg;
+    this.photoUrl;
+    this.prompt;
   }
 }
 class Model {
@@ -19,20 +20,20 @@ class Model {
     this.currBand;
     this.currTheme;
     this.currGenre;
-    this.currAddPrompt;
+    this.currPrompt;
   }
 
   clearForm() {
-    this.$form.trigger("reset");
+    this.$genreInput.val("");
+    this.$themeInput.val("");
+    this.$addInput.val("");
   }
 
   updatePromptValues() {
     this.currTheme = this.$themeInput.val();
     this.currGenre = this.$genreInput.val();
-    this.currAddPrompt = this.$addInput.val()
-      ? this.$addInput.val()
-      : "no text";
-    console.log(this.currAddPrompt, this.$addInput.val());
+    this.currPrompt = this.$addInput.val() ? this.$addInput.val() : "no text";
+    console.log(this.currPrompt, this.$addInput.val());
   }
 
   updateCurrBand(band) {
@@ -47,18 +48,18 @@ class Model {
 
   async generateBandData() {
     const resp = await axios.get(
-      `${this.baseApiUrl}/band-data/${this.currTheme}/${this.currGenre}/${this.currAddPrompt}`
+      `${this.baseApiUrl}/band-data/${this.currTheme}/${this.currGenre}/${this.currPrompt}`
     );
     const bandData = resp.data;
     return bandData.data;
   }
 
-  async generateBandImg(band) {
+  async generatephotoUrl(band) {
     const response = await axios.get(
-      `${this.baseApiUrl}/img/${this.currTheme}/${this.currGenre}/${band.members.length}/${this.currAddPrompt}`
+      `${this.baseApiUrl}/img/${this.currTheme}/${this.currGenre}/${band.members.length}/${this.currPrompt}`
     );
-    const bandImg = response.data;
-    return bandImg.url;
+    const photoUrl = response.data;
+    return photoUrl.url;
   }
 
   async generateAlbumArt(band, album) {
@@ -68,18 +69,32 @@ class Model {
     const albumArt = response.data;
     return albumArt.url;
   }
-  makeBand(bandData, bandImg, albumArt) {
+  makeBand(bandData, photoUrl, albumArt) {
     //const band = new Band(bandData);
-    //band.bandImg = bandImg;
+    //band.photoUrl = photoUrl;
     //band.albums[0].albumArt = albumArt;
     //band.genre = this.currGenre;
     //band.theme = this.currTheme;
     //return band;
-    bandData.bandImg = bandImg;
+    bandData.photoUrl = photoUrl;
     bandData.albums[0].albumArt = albumArt;
     bandData.genre = this.currGenre;
     bandData.theme = this.currTheme;
+    bandData.prompt = this.currPrompt;
     return bandData;
+  }
+  async saveAndReturnBand() {
+    const resp = await axios.post("/api/band", this.currBand);
+    const band = resp.data.band;
+    console.log(band.albums);
+    return band;
+  }
+
+  resetCurrentVallues() {
+    this.currBand = null;
+    this.currTheme = null;
+    this.currGenre = null;
+    this.currPrompt = null;
   }
 }
 
@@ -88,6 +103,7 @@ class View {
     this.$collapse = $("#genre-collapse");
     this.$genreDescription = $("#genre-description");
     this.$modalBtn = $("#modal-btn");
+    this.$closeModalBtm = $("#close-modal");
     this.$closeCanvas = $("#close-canvas");
     this.$modalLabel = $("#band-modalLabel");
     this.$spinner = $("#spinner");
@@ -101,6 +117,25 @@ class View {
 
   updateDescription(description) {
     this.$genreDescription.text(description);
+  }
+
+  renderSavedBand(band) {
+    return;
+  }
+
+  toggleButtons() {
+    this.$saveBtn.prop("disabled", (i, v) => !v);
+    this.$reGenBtn.prop("disabled", (i, v) => !v);
+    this.$discardBtn.prop("disabled", (i, v) => !v);
+    this.$backBtn.prop("disabled", (i, v) => !v);
+  }
+
+  resetModal() {
+    this.$modalContent.empty();
+  }
+
+  closeModal() {
+    this.$closeModalBtm.click();
   }
 
   updateStatus(step) {
@@ -118,13 +153,12 @@ class View {
   }
 
   renderBandReview(band) {
-    console.log(band);
     this.$modalLabel.text(band.name);
     this.$modalContent.empty();
     this.$modalContent.append(`
     <div class="row">
     <div class="col-6">
-      <img src="${band.bandImg}" class="img-fluid" alt="Responsive image">
+      <img src="${band.photoUrl}" class="img-fluid" alt="Responsive image">
     </div>
     <div class="col-6">
       <h3>Band Bio</h3>
@@ -163,18 +197,34 @@ class Controller {
     this.model.$genreInput.on("change", async () =>
       this.handleGenreDescription()
     );
-this.view.$save.btn.on("click", async () => this.handleSave()
+    this.view.$saveBtn.on("click", async () => this.handleSave());
+    this.view.$reGenBtn.on("click", async () => {
+      this.view.toggleButtons();
+      this.view.resetModal();
+      this.handleGenerateBand();
+    });
+    this.view.$discardBtn.on("click", async () => this.handleDiscard());
+    this.view.$backBtn.on("click", async () => this.handleBack());
+    // this.view.$bandsArea.on("click", ".band-card", async (e) =>
+    //   this.handleBandCardClick(e)
+    // );
   }
 
-async handleSave() {
-return
-}
+  async handleSave() {
+    const band = await this.model.saveAndReturnBand();
+    this.view.closeModal();
+    this.view.toggleButtons();
+    this.view.resetModal();
+    this.model.clearForm();
+    this.model.resetCurrentVallues();
+    this.view.renderSavedBand(band);
+  }
 
   async handleSubmit(e) {
     e.preventDefault();
     this.model.updatePromptValues();
     this.view.$closeCanvas.click();
-    console.log(this.model.currAddPrompt);
+    console.log(this.model.currPrompt);
     this.view.$modalBtn.click();
     this.handleGenerateBand();
   }
@@ -187,7 +237,7 @@ return
       const bandData = await this.model.generateBandData();
       step++;
       this.view.updateStatus(step);
-      const bandImg = await this.model.generateBandImg(bandData);
+      const photoUrl = await this.model.generatephotoUrl(bandData);
       step++;
       this.view.updateStatus(step);
       const albumArt = await this.model.generateAlbumArt(
@@ -196,12 +246,13 @@ return
       );
       step++;
       this.view.updateStatus(step);
-      const band = this.model.makeBand(bandData, bandImg, albumArt);
+      const band = this.model.makeBand(bandData, photoUrl, albumArt);
       this.model.updateCurrBand(band);
       this.view.$spinner.hide();
       this.view.renderBandReview(this.model.currBand);
+      this.view.toggleButtons();
     } catch (err) {
-      this.handleErrors(err);
+      this.handleError(err);
     }
   }
 
@@ -216,5 +267,6 @@ return
     this.view.updateDescription(genre.description);
   }
 }
-
-new Controller(new View(), new Model());
+if ($("#band-form")) {
+  new Controller(new View(), new Model());
+}

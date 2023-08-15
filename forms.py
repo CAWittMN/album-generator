@@ -35,28 +35,6 @@ class GenerateForm(FlaskForm):
     additional_prompt = TextAreaField("Additional details")
 
 
-class MemberForm(FlaskForm):
-    name = StringField("Name", validators=[InputRequired()])
-    role = StringField("Role", validators=[InputRequired()])
-
-
-class SongForm(FlaskForm):
-    title = StringField("Title", validators=[InputRequired()])
-    duration_seconds = IntegerField("Duration in seconds", validators=[InputRequired()])
-
-
-class AlbumForm(FlaskForm):
-    title = StringField("Title", validators=[InputRequired()])
-    songs = FieldList(FormField(SongForm), min_entries=1, max_entries=20)
-
-
-class BandForm(FlaskForm):
-    name = StringField("Band name", validators=[InputRequired()])
-    bio = TextAreaField("Bio", validators=[InputRequired()])
-    members = FieldList(FormField(MemberForm), min_entries=1, max_entries=15)
-    album = FormField(AlbumForm)
-
-
 class NewPasswordForm(FlaskForm):
     old_password = PasswordField("Old password", validators=[InputRequired()])
     new_password = PasswordField("New password", validators=[InputRequired()])

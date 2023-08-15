@@ -85,13 +85,23 @@ class Band(db.Model):
     # tags = db.relationship("Tag", secondary="tags_bands", backref="bands")
 
     @classmethod
-    def register_band(cls, user, name, bio, genre_id, theme):
+    def register_band(cls, band_data, genre, user):
+        """Register a new band"""
+
         new_band = cls(
-            user_id=user.id, name=name, bio=bio, genre_id=genre_id, theme=theme
+            name=band_data["name"],
+            bio=band_data["bio"],
+            genre_id=genre.id,
+            theme=band_data["theme"],
+            photo_url=band_data["photoUrl"],
+            user_id=user.id,
+            prompt=band_data["prompt"],
         )
         user.bands.append(new_band)
         db.session.add(new_band)
         db.session.commit()
+
+        return new_band
 
     def to_dict(self):
         album_list = [album.to_dict() for album in self.albums]
@@ -121,11 +131,9 @@ class Member(db.Model):
     role = db.Column(db.String, nullable=False)
 
     @classmethod
-    def register_member(cls, name, role, band):
-        new_member = cls(name=name, role=role, band_id=band.id)
-        band.members.append(new_member)
-        db.session.add(new_member)
-        db.session.commit()
+    def make_member(cls, member, band_id):
+        new_member = cls(name=member["name"], role=member["role"], band_id=band_id)
+        return new_member
 
     def to_dict(self):
         return {
@@ -143,19 +151,20 @@ class Album(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     title = db.Column(db.String, nullable=False)
     artwork_url = db.Column(db.String, nullable=False)
-    prompt = db.Column(db.String, nullable=False, default="")
 
     songs = db.relationship("Song", backref="album", cascade="all, delete-orphan")
 
     @classmethod
-    def register_album(cls, title, band, user):
+    def make_album(cls, album, band, user_id):
         """Register a new album"""
+        new_album = cls(
+            title=album["title"],
+            artwork_url=album["albumArt"],
+            band_id=band.id,
+            user_id=user_id,
+        )
 
-        new_album = cls(title=title, band_id=band.id, user_id=user.id)
-        user.albums.append(new_album)
-        band.albums.append(new_album)
-        db.session.add(new_album)
-        db.session.commit()
+        return new_album
 
     def to_dict(self):
         """Return a dictionary of the album data"""
@@ -180,21 +189,16 @@ class Song(db.Model):
     band_id = db.Column(db.Integer, db.ForeignKey("bands.id"))
 
     @classmethod
-    def register_song(cls, songs, user, album, band):
+    def make_song(cls, song, user_id, album_id, band_id):
         """Register a new song"""
-        for song in songs:
-            new_song = cls(
-                user_id=user.id,
-                album_id=album.id,
-                band_id=band.id,
-                title=song["title"],
-                duration_seconds=song["duration_seconds"],
-            )
-            user.songs.append(new_song)
-            band.songs.append(new_song)
-            album.songs.append(new_song)
-            db.session.add(new_song)
-            db.session.commit()
+        new_song = cls(
+            title=song["title"],
+            duration_seconds=song["duration_seconds"],
+            user_id=user_id,
+            album_id=album_id,
+            band_id=band_id,
+        )
+        return new_song
 
     def to_dict(self):
         """Return a dictionary of the song data"""

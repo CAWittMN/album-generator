@@ -74,6 +74,7 @@
         <h1 class="modal-title fs-5"><span id="status"></span></h1>
         <button
           type="button"
+          id="close-modal"
           class="btn-close visually-hidden"
           data-bs-dismiss="modal"
           aria-label="Close"
@@ -87,10 +88,15 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="re-gen-btn">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="re-gen-btn"
+          disabled
+        >
           Re-Generate
         </button>
-        <button type="button" class="btn btn-secondary" id="back-btn">
+        <button type="button" class="btn btn-secondary" id="back-btn" disabled>
           Back
         </button>
         <button
@@ -98,10 +104,13 @@
           disabled
           class="btn btn-secondary"
           data-bs-dismiss="modal"
+          id="discard-btn"
         >
           Discard
         </button>
-        <button type="button" disabled class="btn btn-primary">Save</button>
+        <button type="button" disabled class="btn btn-primary" id="save-btn">
+          Save
+        </button>
       </div>
     </div>
   </div>
