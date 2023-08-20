@@ -5,9 +5,31 @@ class Band {
     this.genre;
     this.theme;
     this.members = band.members;
-    this.albums = band.albums;
-    this.photoUrl;
+    this.albums;
+    this.photo;
     this.prompt;
+  }
+}
+
+class Member {
+  constructor(member) {
+    this.name = member.name;
+    this.role = member.role;
+  }
+}
+
+class Album {
+  constructor(album) {
+    this.title = album.title;
+    this.songs = album.songs;
+    this.albumArt;
+  }
+}
+
+class Song {
+  constructor(song) {
+    this.title = song.title;
+    this.duration_seconds = song.duration_seconds;
   }
 }
 class Model {
@@ -33,7 +55,6 @@ class Model {
     this.currTheme = this.$themeInput.val();
     this.currGenre = this.$genreInput.val();
     this.currPrompt = this.$addInput.val() ? this.$addInput.val() : "no text";
-    console.log(this.currPrompt, this.$addInput.val());
   }
 
   updateCurrBand(band) {
@@ -54,12 +75,12 @@ class Model {
     return bandData.data;
   }
 
-  async generatephotoUrl(band) {
+  async generatephoto(band) {
     const response = await axios.get(
       `${this.baseApiUrl}/img/${this.currTheme}/${this.currGenre}/${band.members.length}/${this.currPrompt}`
     );
     const photoUrl = response.data;
-    return photoUrl.url;
+    return photoUrl.image;
   }
 
   async generateAlbumArt(band, album) {
@@ -67,26 +88,33 @@ class Model {
       `${this.baseApiUrl}/album-art/${this.currTheme}/${this.currGenre}/${band.name}/${album.title}/test`
     );
     const albumArt = response.data;
-    return albumArt.url;
+    return albumArt.image;
   }
-  makeBand(bandData, photoUrl, albumArt) {
-    //const band = new Band(bandData);
-    //band.photoUrl = photoUrl;
-    //band.albums[0].albumArt = albumArt;
-    //band.genre = this.currGenre;
-    //band.theme = this.currTheme;
-    //return band;
-    bandData.photoUrl = photoUrl;
-    bandData.albums[0].albumArt = albumArt;
-    bandData.genre = this.currGenre;
-    bandData.theme = this.currTheme;
-    bandData.prompt = this.currPrompt;
-    return bandData;
+  makeBand(bandData, photo, albumArt) {
+    const band = new Band(bandData);
+    band.photo = photo;
+    band.genre = this.currGenre;
+    band.theme = this.currTheme;
+    band.prompt = this.currPrompt;
+    const album = this.makeAlbum(bandData.albums[0], albumArt);
+    band.albums = [album];
+    band.members = band.members.map((member) => {
+      return new Member(member);
+    });
+    return band;
+  }
+
+  makeAlbum(albumData, albumArt) {
+    const album = new Album(albumData);
+    album.albumArt = albumArt;
+    album.songs = albumData.songs.map((song) => {
+      return new Song(song);
+    });
+    return album;
   }
   async saveAndReturnBand() {
     const resp = await axios.post("/api/band", this.currBand);
     const band = resp.data.band;
-    console.log(band.albums);
     return band;
   }
 
@@ -155,10 +183,15 @@ class View {
   renderBandReview(band) {
     this.$modalLabel.text(band.name);
     this.$modalContent.empty();
+    console.log(band.photo);
+    console.log(band.albums[0].albumArt);
+    console.log(band);
     this.$modalContent.append(`
     <div class="row">
     <div class="col-6">
-      <img src="${band.photoUrl}" class="img-fluid" alt="Responsive image">
+    <img src="data:image/png;base64,${
+      band.photo
+    }" alt="img_data"  class="img-fluid" id="imgslot"/>
     </div>
     <div class="col-6">
       <h3>Band Bio</h3>
@@ -172,7 +205,7 @@ class View {
           .join("")}
       </ul>
       <h3>Albums</h3>
-      <img src="${
+      <img src="data:image/png;base64,${
         band.albums[0].albumArt
       }" class="img-fluid" alt="Responsive image">
       <ul>
@@ -224,7 +257,6 @@ class Controller {
     e.preventDefault();
     this.model.updatePromptValues();
     this.view.$closeCanvas.click();
-    console.log(this.model.currPrompt);
     this.view.$modalBtn.click();
     this.handleGenerateBand();
   }
@@ -237,7 +269,7 @@ class Controller {
       const bandData = await this.model.generateBandData();
       step++;
       this.view.updateStatus(step);
-      const photoUrl = await this.model.generatephotoUrl(bandData);
+      const photoUrl = await this.model.generatephoto(bandData);
       step++;
       this.view.updateStatus(step);
       const albumArt = await this.model.generateAlbumArt(
@@ -266,7 +298,4 @@ class Controller {
     const genre = await this.model.getGenre();
     this.view.updateDescription(genre.description);
   }
-}
-if ($("#band-form")) {
-  new Controller(new View(), new Model());
 }

@@ -76,7 +76,7 @@ class Band(db.Model):
     genre_id = db.Column(db.Integer, db.ForeignKey("genres.id"))
     theme = db.Column(db.String, nullable=False)
     prompt = db.Column(db.String, nullable=False, default="")
-    photo_url = db.Column(db.String)  # nullable=False)
+    photo = db.Column(db.String)  # nullable=False)
 
     genre = db.relationship("Genre", backref="bands")
     members = db.relationship("Member", backref="band", cascade="all, delete-orphan")
@@ -85,15 +85,15 @@ class Band(db.Model):
     # tags = db.relationship("Tag", secondary="tags_bands", backref="bands")
 
     @classmethod
-    def register_band(cls, band_data, genre, user):
+    def register_band(cls, band_data, genre_id, user):
         """Register a new band"""
 
         new_band = cls(
             name=band_data["name"],
             bio=band_data["bio"],
-            genre_id=genre.id,
+            genre_id=genre_id,
             theme=band_data["theme"],
-            photo_url=band_data["photoUrl"],
+            photo=band_data["photo"],
             user_id=user.id,
             prompt=band_data["prompt"],
         )
@@ -116,7 +116,7 @@ class Band(db.Model):
             "bio": self.bio,
             "genre": self.genre.name,
             "theme": self.theme,
-            "photo_url": self.photo_url,
+            "photo": self.photo,
             "albums": album_list,
             # "tags": tag_list,
         }
@@ -150,7 +150,7 @@ class Album(db.Model):
     band_id = db.Column(db.Integer, db.ForeignKey("bands.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     title = db.Column(db.String, nullable=False)
-    artwork_url = db.Column(db.String, nullable=False)
+    artwork = db.Column(db.String, nullable=False)
 
     songs = db.relationship("Song", backref="album", cascade="all, delete-orphan")
 
@@ -159,7 +159,7 @@ class Album(db.Model):
         """Register a new album"""
         new_album = cls(
             title=album["title"],
-            artwork_url=album["albumArt"],
+            artwork=album["albumArt"],
             band_id=band.id,
             user_id=user_id,
         )
@@ -174,7 +174,7 @@ class Album(db.Model):
             "id": self.id,
             "title": self.title,
             "songs": song_list,
-            "artwork": self.artwork_url,
+            "artwork": self.artwork,
         }
 
 
@@ -206,7 +206,7 @@ class Song(db.Model):
         return {
             "id": self.id,
             "title": self.title,
-            "duration_seonds": self.duration_seconds,
+            "duration_seconds": self.duration_seconds,
         }
 
 

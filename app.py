@@ -1,4 +1,5 @@
 import os
+import base64
 import json
 import openai
 from flask_debugtoolbar import DebugToolbarExtension
@@ -177,7 +178,7 @@ def show_homepage():
     if g.user:
         return redirect(url_for("logged_in_home"))
     form = LoginForm()
-    bands = Band.query.order_by(func.random()).limit(30).all()
+    bands = Band.query.order_by(func.random()).limit(3).all()
 
     return render_template("home.html", form=form, bands=bands)
 
@@ -509,7 +510,7 @@ def generate_band_img_prompt(theme, genre, members_num, add_prompt):
 def generate_album_artwork_prompt(theme, genre, band_name, album_name, add_prompt):
     """Generate a prompt for an album artwork"""
 
-    prompt = f"Album art for a {genre} band named '{band_name}'. The album name is {album_name} and has an obvious {theme} theme. {add_prompt}"
+    prompt = f"Album art for a {genre} band named '{band_name}'. The album name is {album_name} and has an obvious {theme} reflection of the genre. {add_prompt}"
     return prompt
 
 
@@ -535,13 +536,13 @@ def generate_band_img_api(theme, genre, members_num, add_prompt):
     )
     response = openai.Image.create(
         prompt=prompt,
+        response_format="b64_json",
         n=1,
         size="512x512",
     )
-    print(response)
-    url = response["data"][0]["url"]
+    image = response["data"][0]["b64_json"]
     # url = "test.com"
-    return jsonify(url=url)
+    return jsonify(image=image)
 
 
 @app.route(
@@ -560,12 +561,12 @@ def generate_album_artwork_api(theme, genre, band_name, album_name, add_prompt):
     response = openai.Image.create(
         prompt=prompt,
         n=1,
+        response_format="b64_json",
         size="512x512",
     )
-    print(response)
-    url = response["data"][0]["url"]
+    image = response["data"][0]["b64_json"]
     # url = "test.com"
-    return jsonify(url=url)
+    return jsonify(image=image)
 
 
 ###########################
@@ -580,12 +581,12 @@ def post_band():
     genre = Genre.query.filter_by(name=band_data["genre"]).first()
     # tags_list = data["tags"]
     # tags = Tag.query.filter(Tag.name.in_(tags_list)).all()
-    band = Band.register_band(band_data=band_data, genre=genre, user=user)
+    band = Band.register_band(band_data=band_data, genre_id=genre.id, user=user)
     for member in band_data["members"]:
         new_member = Member.make_member(member=member, band_id=band.id)
         band.members.append(new_member)
 
-    album = Album.make_album(band=band, album=band_data["albums"][0], user_id=g.user.id)
+    album = Album.make_album(band=band, album=band_data["albums"][0], user_id=user.id)
     for song in band_data["albums"][0]["songs"]:
         new_song = Song.make_song(
             song=song, album_id=album.id, user_id=g.user.id, band_id=band.id
