@@ -518,7 +518,7 @@ def generate_album_artwork_prompt(theme, genre, band_name, album_name, add_promp
 def generate_band_data_api(theme, genre, add_prompt):
     """Generate a new band"""
     prompt = generate_band_prompt(theme=theme, genre=genre, add_prompt=add_prompt)
-    response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=prompt)
+    response = openai.ChatCompletion.create(model="gpt-4", messages=prompt)
     text = response["choices"][0].message.content.strip()
     print(text)
     data = json.loads(text)

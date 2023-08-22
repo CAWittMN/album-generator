@@ -141,6 +141,8 @@ class View {
     this.$reGenBtn = $("#re-gen-btn");
     this.$discardBtn = $("#discard-btn");
     this.$backBtn = $("#back-btn");
+    this.$bandList = $("#band-list");
+    this.$errorReTryBtn = $("#error-retry-btn");
   }
 
   updateDescription(description) {
@@ -156,6 +158,10 @@ class View {
     this.$reGenBtn.prop("disabled", (i, v) => !v);
     this.$discardBtn.prop("disabled", (i, v) => !v);
     this.$backBtn.prop("disabled", (i, v) => !v);
+  }
+
+  toggleSpinner() {
+    this.$spinner.toggle();
   }
 
   resetModal() {
@@ -180,12 +186,18 @@ class View {
     }
   }
 
+  modalError(err) {
+    this.$modalContent.empty();
+    this.$errorReTryBtn.show();
+    this.$modalContent.append(`
+    <div class="alert alert-danger" role="alert">
+    ${err}</div>
+    <p>Something went wrong! Please try again.</p>`);
+  }
+
   renderBandReview(band) {
     this.$modalLabel.text(band.name);
     this.$modalContent.empty();
-    console.log(band.photo);
-    console.log(band.albums[0].albumArt);
-    console.log(band);
     this.$modalContent.append(`
     <div class="row">
     <div class="col-6">
@@ -231,13 +243,10 @@ class Controller {
       this.handleGenreDescription()
     );
     this.view.$saveBtn.on("click", async () => this.handleSave());
-    this.view.$reGenBtn.on("click", async () => {
-      this.view.toggleButtons();
-      this.view.resetModal();
-      this.handleGenerateBand();
-    });
+    this.view.$reGenBtn.on("click", async () => this.handleReGen());
     this.view.$discardBtn.on("click", async () => this.handleDiscard());
     this.view.$backBtn.on("click", async () => this.handleBack());
+    this.view.$errorReTryBtn.on("click", async () => this.handleReGen());
     // this.view.$bandsArea.on("click", ".band-card", async (e) =>
     //   this.handleBandCardClick(e)
     // );
@@ -253,6 +262,20 @@ class Controller {
     this.view.renderSavedBand(band);
   }
 
+  handleReGen() {
+    this.view.toggleButtons();
+    this.view.resetModal();
+    this.handleGenerateBand();
+  }
+
+  handleDiscard() {
+    this.model.clearForm();
+    this.model.resetCurrentVallues();
+    this.view.closeModal();
+    this.view.toggleButtons();
+    this.view.resetModal();
+  }
+
   async handleSubmit(e) {
     e.preventDefault();
     this.model.updatePromptValues();
@@ -262,9 +285,10 @@ class Controller {
   }
 
   async handleGenerateBand() {
+    this.view.$errorReTryBtn.hide();
+    this.view.toggleSpinner();
     let step = 1;
     this.view.updateStatus(step);
-    this.view.$spinner.show();
     try {
       const bandData = await this.model.generateBandData();
       step++;
@@ -280,7 +304,7 @@ class Controller {
       this.view.updateStatus(step);
       const band = this.model.makeBand(bandData, photoUrl, albumArt);
       this.model.updateCurrBand(band);
-      this.view.$spinner.hide();
+      this.view.toggleSpinner();
       this.view.renderBandReview(this.model.currBand);
       this.view.toggleButtons();
     } catch (err) {
@@ -289,7 +313,9 @@ class Controller {
   }
 
   handleError(err) {
-    step = 0;
+    const step = 0;
+    this.view.toggleSpinner();
+    this.view.$errorReTryBtn.show();
     this.view.updateStatus(step);
     this.view.modalError(err);
   }
@@ -298,4 +324,8 @@ class Controller {
     const genre = await this.model.getGenre();
     this.view.updateDescription(genre.description);
   }
+}
+
+if ($("#band-form").length > 0) {
+  new Controller(new View(), new Model());
 }
