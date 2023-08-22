@@ -2,7 +2,8 @@ import os
 import base64
 import json
 import openai
-from flask_debugtoolbar import DebugToolbarExtension
+
+# from flask_debugtoolbar import DebugToolbarExtension
 from flask import (
     Flask,
     render_template,
@@ -54,7 +55,7 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "tempkey")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
     "DATABASE_URL", "postgresql:///album_generator"
 )
-toolbar = DebugToolbarExtension(app)
+# toolbar = DebugToolbarExtension(app)
 
 
 connect_to_db(app)
