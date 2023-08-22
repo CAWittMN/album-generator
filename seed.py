@@ -65,13 +65,13 @@ G15 = Genre(
     name="Disco Polo",
     description="Disco Polo is a genre of music originating from Poland in the early 1980s. It is a form of Eurodance and pop music. Its name comes from a popular music genre in the late 1980s, which replaced many of the beat-driven forms of disco music, and which derived from disco, hi-NRG, and Euro disco. Disco polo music is strongly associated with the dance style and associated fashion, hairstyle and make-up. The music is popular in Poland, and is gaining popularity in Ukraine, Belarus and Lithuania.",
 )
-G16 = Genre(
-    name="Sklap",
-    hypothetical=True,
-    description="Sklap is a genre of music that originated in an a small underground music cult in 2005. The genre consists purely of noises that can be made using only human skin. Mostly clapping and slapping sounds. At first, the genre gained popularity as a meme and people would listen to it ironically. However, as most things that are ironic, it became unironic and people started to listen to it unironically while never admitting they actually like it. The genre is now one of the most popular genres in the world.",
-)
+# G16 = Genre(
+#    name="Sklap",
+#    hypothetical=True,
+#    description="Sklap is a genre of music that originated in an a small underground music cult in 2005. The genre consists purely of noises that can be made using only human skin. Mostly clapping and slapping sounds. At first, the genre gained popularity as a meme and people would listen to it ironically. However, as most things that are ironic, it became unironic and people started to listen to it unironically while never admitting they actually like it. The genre is now one of the most popular genres in the world.",
+# )
 with app.app_context():
     db.session.add_all(
-        [G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16]
+        [G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15]
     )
     db.session.commit()
